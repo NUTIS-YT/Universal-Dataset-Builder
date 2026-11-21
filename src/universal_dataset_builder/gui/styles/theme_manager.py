@@ -8,12 +8,11 @@ class ThemeManager:
 
     DARK = """
     QWidget {
-        background-color: #17191d;
         color: #e8eaf0;
         font-family: "Segoe UI", "Inter", sans-serif;
         font-size: 10pt;
     }
-    QMainWindow, QMenuBar, QMenu { background-color: #17191d; }
+    QMainWindow, #CentralWidget, QMenuBar, QMenu { background-color: #17191d; }
     #Sidebar { background-color: #202329; border-right: 1px solid #30343c; }
     #Brand { color: #f5f6fa; font-size: 17pt; font-weight: 700; }
     #NavigationButton {
@@ -46,12 +45,11 @@ class ThemeManager:
 
     LIGHT = """
     QWidget {
-        background-color: #f5f6f8;
         color: #20242b;
         font-family: "Segoe UI", "Inter", sans-serif;
         font-size: 10pt;
     }
-    QMainWindow, QMenuBar, QMenu { background-color: #f5f6f8; }
+    QMainWindow, #CentralWidget, QMenuBar, QMenu { background-color: #f5f6f8; }
     #Sidebar { background-color: #ffffff; border-right: 1px solid #e2e5ea; }
     #Brand { color: #20242b; font-size: 17pt; font-weight: 700; }
     #NavigationButton {
