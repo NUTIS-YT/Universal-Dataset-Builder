@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 from PySide6.QtWidgets import QApplication
 
 from universal_dataset_builder.gui.main_window import MainWindow
