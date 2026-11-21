@@ -100,6 +100,7 @@ def create_project_database(database_path: Path, name: str, dataset_path: str) -
     CREATE INDEX idx_images_status ON images(status);
     CREATE INDEX idx_captions_image_id ON captions(image_id);
     """
+
     with connect(database_path) as connection:
         connection.execute(f"PRAGMA application_id = {APPLICATION_ID}")
         connection.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
@@ -162,3 +163,19 @@ def read_project_statistics(database_path: Path) -> dict[str, int]:
         "reviewed": int(reviewed),
         "failed": int(failed),
     }
+
+
+def read_images(database_path: Path) -> list[dict[str, object]]:
+    """Return indexed image records for the dataset browser."""
+    read_project_metadata(database_path)
+    with connect(database_path) as connection:
+        rows = connection.execute(
+            """
+            SELECT
+                image_id, filename, original_filename, original_path,
+                normalized_path, width, height, format, file_hash, status
+            FROM images
+            ORDER BY filename COLLATE NOCASE, filename
+            """
+        ).fetchall()
+    return [dict(row) for row in rows]
