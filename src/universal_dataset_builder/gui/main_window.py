@@ -112,6 +112,7 @@ class MainWindow(QMainWindow):
 
         self.normalizer_page = NormalizerPage()
         self.normalizer_page.normalization_completed.connect(self._refresh_dashboard)
+        self.normalizer_page.normalization_completed.connect(self.dataset_page.refresh)
         self.pages.addWidget(self.normalizer_page)
 
         for title, description in self.NAV_ITEMS[3:-1]:

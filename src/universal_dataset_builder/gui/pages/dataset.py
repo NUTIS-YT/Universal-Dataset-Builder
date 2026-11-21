@@ -224,6 +224,10 @@ class DatasetPage(QWidget):
             return
         self._refresh_gallery()
 
+    def refresh(self) -> None:
+        """Reload image records and thumbnails after an external dataset operation."""
+        self._refresh_gallery()
+
     def start_scan(self) -> None:
         """Start scanning without blocking the Qt event loop."""
         if self.project is None or self._worker is not None:

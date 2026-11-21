@@ -255,12 +255,15 @@ def normalize_project_images(
                 raise FileNotFoundError(f"Source image is missing: {source_path}")
 
             recorded_hash = row.get("file_hash")
-            if recorded_hash and _file_sha256(source_path) != recorded_hash:
+            source_hash = _file_sha256(source_path)
+            if recorded_hash and source_hash != recorded_hash:
                 raise ValueError(
                     "Source image changed since the last scan. Run Scan source first."
                 )
 
             image, fingerprint = _prepare_image(source_path, alpha_mode)
+            if _file_sha256(source_path) != source_hash:
+                raise ValueError("Source image changed during normalization. Run Scan source again.")
             if fingerprint in seen_fingerprints and skip_duplicates:
                 duplicates += 1
                 continue
