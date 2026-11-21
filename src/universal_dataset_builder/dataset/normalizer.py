@@ -263,7 +263,9 @@ def normalize_project_images(
 
             image, fingerprint = _prepare_image(source_path, alpha_mode)
             if _file_sha256(source_path) != source_hash:
-                raise ValueError("Source image changed during normalization. Run Scan source again.")
+                raise ValueError(
+                    "Source image changed during normalization. Run Scan source again."
+                )
             if fingerprint in seen_fingerprints and skip_duplicates:
                 duplicates += 1
                 continue
