@@ -25,9 +25,8 @@ from universal_dataset_builder.gui.pages.caption_generator import CaptionGenerat
 from universal_dataset_builder.gui.pages.dashboard import DashboardPage
 from universal_dataset_builder.gui.pages.dataset import DatasetPage
 from universal_dataset_builder.gui.pages.normalizer import NormalizerPage
-from universal_dataset_builder.gui.pages.placeholder import PlaceholderPage
-from universal_dataset_builder.gui.pages.vlm_connection import VLMConnectionPage
 from universal_dataset_builder.gui.pages.settings import SettingsPage
+from universal_dataset_builder.gui.pages.vlm_connection import VLMConnectionPage
 from universal_dataset_builder.gui.styles.theme_manager import ThemeManager
 
 LOGGER = logging.getLogger(__name__)

@@ -6,7 +6,6 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 from threading import Event
-from collections.abc import Callable
 
 from PySide6.QtCore import QObject, QRunnable, Signal, Slot
 
