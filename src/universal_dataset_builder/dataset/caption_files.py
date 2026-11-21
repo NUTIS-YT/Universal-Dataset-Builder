@@ -12,7 +12,8 @@ def caption_sidecar_path(dataset_directory: Path, normalized_image: Path) -> Pat
     try:
         relative_path = image_path.relative_to(dataset_root)
     except ValueError as error:
-        raise ValueError("Normalized images must be stored inside the project dataset folder.") from error
+        message = "Normalized images must be stored inside the project dataset folder."
+        raise ValueError(message) from error
 
     if relative_path == Path("."):
         raise ValueError("A dataset directory cannot be used as an image path.")
