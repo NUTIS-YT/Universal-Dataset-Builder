@@ -232,6 +232,7 @@ def normalize_project_images(
     failed = 0
     failed_files: list[str] = []
     cancelled = False
+    processed = 0
     next_number = start_number
     seen_fingerprints: set[str] = set()
     srgb_profile = _srgb_profile_bytes()
@@ -245,6 +246,7 @@ def normalize_project_images(
         if progress_callback is not None:
             progress_callback(index - 1, len(eligible), relative_name)
 
+        image: Image.Image | None = None
         try:
             source_path = _safe_child_path(source_root, Path(str(row["original_path"])))
             if not source_path.is_file():
@@ -279,11 +281,17 @@ def normalize_project_images(
                 filename = f"{next_number:05d}.png"
                 destination = dataset_root / filename
                 next_number += 1
-                if not destination.exists():
-                    break
-                conflicts += 1
+                if destination.exists():
+                    conflicts += 1
+                    continue
+                try:
+                    _write_png_without_overwrite(image, destination, srgb_profile)
+                except FileExistsError:
+                    # Another process created this number after the existence check.
+                    conflicts += 1
+                    continue
+                break
 
-            _write_png_without_overwrite(image, destination, srgb_profile)
             caption = str(row.get("caption_text") or "")
             sidecar: Path | None = None
             try:
@@ -326,16 +334,15 @@ def normalize_project_images(
             failed += 1
             failed_files.append(f"{relative_name}: {error}")
         finally:
-            if "image" in locals():
+            if image is not None:
                 image.close()
-                del image
-
-        if progress_callback is not None:
-            progress_callback(index, len(eligible), relative_name)
+            processed = index
+            if progress_callback is not None:
+                progress_callback(processed, len(eligible), relative_name)
 
     if progress_callback is not None:
         progress_callback(
-            min(index if eligible else 0, len(eligible)),
+            processed,
             len(eligible),
             "Cancelled" if cancelled else "Complete",
         )
