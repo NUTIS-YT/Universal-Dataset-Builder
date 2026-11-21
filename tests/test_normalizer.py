@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import shutil
+from pathlib import Path
 
 from PIL import Image
 
@@ -255,3 +256,20 @@ def test_normalizer_can_be_cancelled_between_images(tmp_path):
     assert summary.cancelled
     assert summary.normalized == 1
     assert len(list(project.dataset_path.glob("*.png"))) == 1
+
+
+
+def test_normalizer_converts_cmyk_source_to_rgb_png(tmp_path):
+    project = Project.create(tmp_path / "project", "CMYK test")
+    source = project.source_path / "print.tif"
+    Image.new("CMYK", (12, 7), (0, 128, 255, 0)).save(source)
+    _index_image(project, source)
+
+    summary = normalize_project_images(
+        project.path, project.source_path, project.dataset_path
+    )
+
+    with Image.open(project.dataset_path / "00001.png") as output:
+        assert output.mode == "RGB"
+        assert output.size == (12, 7)
+    assert summary.normalized == 1

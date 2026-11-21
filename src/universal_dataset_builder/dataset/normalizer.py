@@ -217,7 +217,9 @@ def normalize_project_images(
         or source_root.is_relative_to(dataset_root)
         or dataset_root.is_relative_to(source_root)
     ):
-        raise ValueError("Source and dataset directories must be separate, non-overlapping folders.")
+        raise ValueError(
+            "Source and dataset directories must be separate, non-overlapping folders."
+        )
 
     dataset_root.mkdir(parents=True, exist_ok=True)
     rows = _sort_images(read_images(database), sort_mode)
