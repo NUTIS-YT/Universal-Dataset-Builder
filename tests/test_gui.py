@@ -6,8 +6,10 @@ from PySide6.QtWidgets import QApplication
 from universal_dataset_builder.core.project import Project
 from universal_dataset_builder.dataset.scanner import scan_directory
 from universal_dataset_builder.gui.main_window import MainWindow
+from universal_dataset_builder.gui.pages.caption_generator import CaptionGeneratorPage
 from universal_dataset_builder.gui.pages.dataset import DatasetPage
 from universal_dataset_builder.gui.pages.normalizer import NormalizerPage
+from universal_dataset_builder.gui.pages.vlm_connection import VLMConnectionPage
 from universal_dataset_builder.gui.styles.theme_manager import ThemeManager
 from universal_dataset_builder.storage.database import read_images
 
@@ -31,6 +33,8 @@ def test_main_window_builds_navigation_and_switches_theme(tmp_path, monkeypatch)
     assert window.centralWidget().objectName() == "CentralWidget"
     assert isinstance(window.pages.widget(1), type(window.dataset_page))
     assert isinstance(window.pages.widget(2), NormalizerPage)
+    assert isinstance(window.pages.widget(3), CaptionGeneratorPage)
+    assert isinstance(window.pages.widget(4), VLMConnectionPage)
 
     window.show_page(1)
     assert window.page_title.text() == "Dataset"

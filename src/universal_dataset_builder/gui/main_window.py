@@ -21,10 +21,12 @@ from PySide6.QtWidgets import (
 
 from universal_dataset_builder.core.config import ConfigStore
 from universal_dataset_builder.core.project import Project
+from universal_dataset_builder.gui.pages.caption_generator import CaptionGeneratorPage
 from universal_dataset_builder.gui.pages.dashboard import DashboardPage
 from universal_dataset_builder.gui.pages.dataset import DatasetPage
 from universal_dataset_builder.gui.pages.normalizer import NormalizerPage
 from universal_dataset_builder.gui.pages.placeholder import PlaceholderPage
+from universal_dataset_builder.gui.pages.vlm_connection import VLMConnectionPage
 from universal_dataset_builder.gui.pages.settings import SettingsPage
 from universal_dataset_builder.gui.styles.theme_manager import ThemeManager
 
@@ -115,8 +117,16 @@ class MainWindow(QMainWindow):
         self.normalizer_page.normalization_completed.connect(self.dataset_page.refresh)
         self.pages.addWidget(self.normalizer_page)
 
-        for title, description in self.NAV_ITEMS[3:-1]:
-            self.pages.addWidget(PlaceholderPage(title, description))
+        self.caption_generator_page = CaptionGeneratorPage(self.config)
+        self.caption_generator_page.generation_completed.connect(self._refresh_dashboard)
+        self.caption_generator_page.generation_completed.connect(self.dataset_page.refresh)
+        self.pages.addWidget(self.caption_generator_page)
+
+        self.vlm_connection_page = VLMConnectionPage(self.config)
+        self.vlm_connection_page.connection_saved.connect(
+            self.caption_generator_page.refresh_connection
+        )
+        self.pages.addWidget(self.vlm_connection_page)
 
         self.settings_page = SettingsPage(self.config.get("theme", "dark"))
         self.settings_page.theme_changed.connect(self.apply_theme)
@@ -217,6 +227,7 @@ class MainWindow(QMainWindow):
         self.dashboard.set_project(project)
         self.dataset_page.set_project(project)
         self.normalizer_page.set_project(project)
+        self.caption_generator_page.set_project(project)
         self.project_label.setText(project.name)
         self.project_status.setText(project.name)
         self.setWindowTitle(f"{project.name} — Universal Dataset Builder")
@@ -229,6 +240,7 @@ class MainWindow(QMainWindow):
         self.dashboard.set_project(None)
         self.dataset_page.set_project(None)
         self.normalizer_page.set_project(None)
+        self.caption_generator_page.set_project(None)
         self.project_label.setText("No project open")
         self.project_status.setText("No project")
         self.setWindowTitle("Universal Dataset Builder")

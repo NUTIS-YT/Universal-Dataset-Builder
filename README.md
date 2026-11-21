@@ -6,7 +6,7 @@ The application stays independent of any particular VLM runtime or model trainer
 
 ## Current status
 
-The desktop application includes project creation and opening, per-project SQLite storage, dark and light themes, source image scanning, a Dataset Browser, and a background Image Normalizer.
+The desktop application includes project creation and opening, per-project SQLite storage, dark and light themes, source image scanning, a Dataset Browser, an Image Normalizer, VLM connection management, and batch caption generation.
 
 The scanner indexes PNG, JPEG, WEBP, BMP, and TIFF images, records dimensions, format and SHA-256 hashes, flags unreadable files, and handles repeat scans without duplicating records. Original source files are read in place and are never moved or modified.
 
@@ -14,7 +14,7 @@ The Dataset Browser displays image thumbnails, supports filename search and stat
 
 The Image Normalizer converts indexed source images to sequential PNG files, applies EXIF orientation, converts embedded color profiles to sRGB, handles transparency, detects exact pixel duplicates, and never overwrites existing output files. Normalization runs in the background and can be cancelled between images.
 
-VLM API integration, automated caption generation, validation, and export are the next development milestones.
+VLM Connection uses an external OpenAI-compatible API. It retrieves available model IDs from /models and sends image-plus-prompt requests to /chat/completions. Caption Generator supports missing-caption and regenerate-unreviewed modes, sequential processing, progress reporting, cancellation between requests, and metadata-aware caption storage. Generated captions remain unreviewed until a person accepts or edits them in Dataset.
 
 ## Requirements
 
@@ -45,20 +45,21 @@ Run tests and lint checks:
 The code is organized under src/universal_dataset_builder/:
 
 - core/ — application configuration and project lifecycle.
-- gui/ — Qt main window, pages, widgets, and theme management.
 - dataset/ — source scanning, image normalization, and caption sidecar handling.
+- gui/ — Qt main window, pages, widgets, and theme management.
 - storage/ — SQLite schema and database access.
+- vlm/ — OpenAI-compatible API client and image preparation.
 - workers/ — background operations coordinated with the GUI.
 
-VLM inference will use an external OpenAI-compatible HTTP API. The application will not manage model downloads or server processes.
+VLM API requests are executed in worker threads so network operations do not freeze the interface. The application does not manage model downloads or server processes. API settings are stored in the user's local application configuration; avoid saving a production secret on a shared computer.
 
 ## Privacy and data safety
 
 - Original source images remain separate from normalized dataset output.
 - Normalization never overwrites an existing file in dataset/.
 - Caption sidecars are written only within the project dataset directory.
-- Project databases are local SQLite files.
-- Future API credentials must remain in local configuration and must never be committed.
+- Project databases and application settings are local files.
+- API keys are optional and are sent only to the configured endpoint.
 - Users are responsible for confirming that images are licensed for their intended training use. SFW classification alone does not grant usage rights.
 
 ## License

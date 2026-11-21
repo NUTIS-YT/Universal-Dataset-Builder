@@ -10,6 +10,7 @@ from universal_dataset_builder.storage.database import (
     SCHEMA_VERSION,
     connect,
     read_images,
+    save_generated_caption,
     save_image_caption,
     set_image_status,
 )
@@ -69,6 +70,37 @@ def test_save_caption_marks_image_reviewed_and_replaces_previous_caption(tmp_pat
 
     with connect(project.path) as connection:
         assert connection.execute("SELECT COUNT(*) FROM captions").fetchone()[0] == 1
+
+
+def test_generated_caption_is_saved_as_unreviewed_with_model_metadata(tmp_path):
+    project = Project.create(tmp_path / "dataset", "Generated caption test")
+    with connect(project.path) as connection:
+        connection.execute(
+            """
+            INSERT INTO images (filename, original_filename, original_path, status)
+            VALUES ('fox.png', 'fox.png', '/source/fox.png', 'Normalized')
+            """
+        )
+        image_id = connection.execute("SELECT last_insert_rowid()").fetchone()[0]
+        connection.commit()
+
+    result = save_generated_caption(
+        project.path,
+        image_id,
+        "A red fox standing in grass.",
+        model_name="qwen-vl",
+        prompt_template="Describe the image.",
+    )
+    assert result is None
+
+    image = read_images(project.path)[0]
+    assert image["caption_text"] == "A red fox standing in grass."
+    assert image["caption_reviewed"] == 0
+    assert image["status"] == "Captioned"
+    with connect(project.path) as connection:
+        caption = connection.execute("SELECT * FROM captions").fetchone()
+    assert caption["model_name"] == "qwen-vl"
+    assert caption["prompt_template"] == "Describe the image."
 
 
 def test_caption_cannot_be_empty_or_saved_for_unknown_image(tmp_path):

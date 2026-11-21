@@ -205,7 +205,7 @@ def read_images(database_path: Path) -> list[dict[str, object]]:
 
 
 def save_image_caption(database_path: Path, image_id: int, caption_text: str) -> str | None:
-    """Save one reviewed caption and return the normalized image path, if present."""
+    """Save one manually reviewed caption and return the normalized image path."""
     clean_caption = caption_text.strip()
     if not clean_caption:
         raise ValueError("Caption cannot be empty.")
@@ -229,6 +229,53 @@ def save_image_caption(database_path: Path, image_id: int, caption_text: str) ->
         )
         connection.execute(
             "UPDATE images SET status = 'Reviewed' WHERE image_id = ?",
+            (image_id,),
+        )
+        connection.execute(
+            "UPDATE projects SET updated_at = ? WHERE project_id = 1",
+            (now,),
+        )
+        connection.commit()
+
+    normalized_path = image["normalized_path"]
+    return str(normalized_path) if normalized_path else None
+
+
+def save_generated_caption(
+    database_path: Path,
+    image_id: int,
+    caption_text: str,
+    *,
+    model_name: str,
+    prompt_template: str,
+) -> str | None:
+    """Replace the current caption with an unreviewed VLM-generated caption."""
+    clean_caption = caption_text.strip()
+    if not clean_caption:
+        raise ValueError("Generated caption cannot be empty.")
+    if not model_name.strip():
+        raise ValueError("A model name is required for generated captions.")
+
+    with connect(database_path) as connection:
+        image = connection.execute(
+            "SELECT normalized_path FROM images WHERE image_id = ?",
+            (image_id,),
+        ).fetchone()
+        if image is None:
+            raise ValueError(f"Image record {image_id} does not exist.")
+
+        now = _timestamp()
+        connection.execute("DELETE FROM captions WHERE image_id = ?", (image_id,))
+        connection.execute(
+            """
+            INSERT INTO captions (
+                image_id, caption_text, prompt_template, model_name, generated_at, reviewed
+            ) VALUES (?, ?, ?, ?, ?, 0)
+            """,
+            (image_id, clean_caption, prompt_template, model_name.strip(), now),
+        )
+        connection.execute(
+            "UPDATE images SET status = 'Captioned' WHERE image_id = ?",
             (image_id,),
         )
         connection.execute(
