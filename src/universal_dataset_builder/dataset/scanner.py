@@ -38,7 +38,9 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _inspect_image(path: Path) -> tuple[int | None, int | None, str, str | None, str | None]:
+def _inspect_image(
+    path: Path,
+) -> tuple[int | None, int | None, str, str | None, str | None]:
     """Return dimensions, format, hash and a validation error, if any."""
     image_hash: str | None
     hash_error: str | None = None
@@ -62,7 +64,10 @@ def _inspect_image(path: Path) -> tuple[int | None, int | None, str, str | None,
                 orientation = image.getexif().get(274, 1)
                 if orientation in {5, 6, 7, 8}:
                     width, height = height, width
-                image.verify()
+
+            # Pillow requires verify() to be called immediately after open().
+            with Image.open(path) as verification_image:
+                verification_image.verify()
     except (
         Image.DecompressionBombError,
         Image.DecompressionBombWarning,
@@ -88,8 +93,12 @@ def _iter_image_files(source: Path, recursive: bool) -> list[Path]:
                 files.append(candidate)
         except OSError:
             continue
-    return sorted(files, key=lambda item: (item.relative_to(source).as_posix().casefold(),
-                                           item.relative_to(source).as_posix()))
+
+    def sort_key(item: Path) -> tuple[str, str]:
+        relative_name = item.relative_to(source).as_posix()
+        return relative_name.casefold(), relative_name
+
+    return sorted(files, key=sort_key)
 
 
 def scan_directory(
