@@ -6,13 +6,15 @@ The application stays independent of any particular VLM runtime or model trainer
 
 ## Current status
 
-The desktop application includes project creation and opening, per-project SQLite storage, dark and light themes, source image scanning, and a Dataset Browser.
+The desktop application includes project creation and opening, per-project SQLite storage, dark and light themes, source image scanning, a Dataset Browser, and a background Image Normalizer.
 
 The scanner indexes PNG, JPEG, WEBP, BMP, and TIFF images, records dimensions, format and SHA-256 hashes, flags unreadable files, and handles repeat scans without duplicating records. Original source files are read in place and are never moved or modified.
 
-The Dataset Browser displays image thumbnails, supports filename search and status filters, opens a larger image preview, and lets users edit captions and review image status. Captions are stored in the project database. When a normalized image already exists inside dataset/, saving its caption also writes a neighboring UTF-8 TXT file.
+The Dataset Browser displays image thumbnails, supports filename search and status filters, opens a larger image preview, and lets users edit captions and review image status. Captions are stored in the project database. When a normalized image exists inside dataset/, saving its caption also writes a neighboring UTF-8 TXT file.
 
-Image normalization, VLM API integration, automated caption generation, validation, and export are the next development milestones.
+The Image Normalizer converts indexed source images to sequential PNG files, applies EXIF orientation, converts embedded color profiles to sRGB, handles transparency, detects exact pixel duplicates, and never overwrites existing output files. Normalization runs in the background and can be cancelled between images.
+
+VLM API integration, automated caption generation, validation, and export are the next development milestones.
 
 ## Requirements
 
@@ -34,11 +36,9 @@ Run tests and lint checks:
 ## Project layout
 
     MyDataset/
-    ├── project.fdb       # SQLite project database
+    ├── project.fdb       # Project database
     ├── source/           # Original source images
-    └── dataset/          # Normalized images and captions
-
-The database stores project metadata, image records, captions, jobs, model profiles, and project settings. Application preferences are stored separately in the operating system's user configuration directory.
+    └── dataset/          # Normalized PNG images and TXT captions
 
 ## Architecture
 
@@ -46,7 +46,7 @@ The code is organized under src/universal_dataset_builder/:
 
 - core/ — application configuration and project lifecycle.
 - gui/ — Qt main window, pages, widgets, and theme management.
-- dataset/ — source scanning and caption sidecar handling.
+- dataset/ — source scanning, image normalization, and caption sidecar handling.
 - storage/ — SQLite schema and database access.
 - workers/ — background operations coordinated with the GUI.
 
@@ -55,6 +55,7 @@ VLM inference will use an external OpenAI-compatible HTTP API. The application w
 ## Privacy and data safety
 
 - Original source images remain separate from normalized dataset output.
+- Normalization never overwrites an existing file in dataset/.
 - Caption sidecars are written only within the project dataset directory.
 - Project databases are local SQLite files.
 - Future API credentials must remain in local configuration and must never be committed.
