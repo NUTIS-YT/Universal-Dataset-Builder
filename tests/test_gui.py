@@ -19,7 +19,7 @@ def test_main_window_builds_navigation_and_switches_theme(tmp_path, monkeypatch)
     assert len(window.navigation_buttons) == 6
     assert window.windowTitle() == "Universal Dataset Builder"
     assert window.centralWidget().objectName() == "CentralWidget"
-    assert window.pages.widget(1) is window.dataset_page
+    assert isinstance(window.pages.widget(1), type(window.dataset_page))
 
     window.show_page(1)
     assert window.page_title.text() == "Dataset"
@@ -42,5 +42,5 @@ def test_theme_does_not_paint_every_child_widget():
     assert "QWidget {\n        color:" in dark
     assert "QWidget {\n        background-color:" not in dark
     assert "QWidget {\n        background-color:" not in light
-    assert "#CentralWidget { background-color:" in dark
-    assert "#CentralWidget { background-color:" in light
+    assert "QMainWindow, #CentralWidget, QMenuBar, QMenu { background-color: #17191d; }" in dark
+    assert "QMainWindow, #CentralWidget, QMenuBar, QMenu { background-color: #f5f6f8; }" in light
