@@ -6,9 +6,11 @@ The application stays independent of any particular VLM runtime or model trainer
 
 ## Current status
 
-The initial foundation includes a PySide6 desktop shell, dark and light themes, project creation and opening, a per-project SQLite database (project.fdb), separate source/ and dataset/ directories, dashboard statistics, automated tests, and GitHub Actions CI.
+The application currently includes a PySide6 desktop shell, dark and light themes, project creation and opening, a per-project SQLite database (project.fdb), separate source/ and dataset/ directories, dashboard statistics, and a background dataset scanner.
 
-Image scanning, normalization, VLM integration, caption generation, dataset review, validation, and export are planned for later milestones.
+The scanner indexes PNG, JPEG, WEBP, BMP, and TIFF images, records dimensions, format and SHA-256 hashes, flags unreadable files, and safely handles repeat scans. Original source files are read in place and are never moved or modified.
+
+Image normalization, VLM integration, caption generation, dataset review, validation, and export are planned for later milestones.
 
 ## Requirements
 
@@ -42,7 +44,9 @@ The code is organized under src/universal_dataset_builder/:
 
 - core/ — application configuration and project lifecycle.
 - gui/ — Qt main window, pages, and theme management.
+- dataset/ — source scanning and image metadata inspection.
 - storage/ — SQLite schema and database access.
+- workers/ — background operations coordinated with the GUI.
 
 VLM inference will use an external OpenAI-compatible HTTP API. The application will not manage model downloads or server processes.
 
