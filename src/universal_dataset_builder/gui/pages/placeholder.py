@@ -30,7 +30,8 @@ class PlaceholderPage(QWidget):
         status = QLabel("Planned for a future milestone")
         status.setObjectName("SectionTitle")
         detail = QLabel(
-            "This section will become available as its processing and review workflow is implemented."
+            "This section will become available as its processing and review "
+            "workflow is implemented."
         )
         detail.setObjectName("MutedText")
         detail.setWordWrap(True)

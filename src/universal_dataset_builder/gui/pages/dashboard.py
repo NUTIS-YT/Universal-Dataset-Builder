@@ -99,7 +99,10 @@ class DashboardPage(QWidget):
         self.description.setText(
             f"Project location: {project.path.parent}"
             if project
-            else "Create a project to organize source images, normalized files, and training captions."
+            else (
+                "Create a project to organize source images, normalized files, "
+                "and training captions."
+            )
         )
         if project is None:
             for counter in self.counters.values():

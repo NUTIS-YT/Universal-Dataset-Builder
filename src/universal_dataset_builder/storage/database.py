@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Iterator
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Iterator
 
 APPLICATION_ID = 0x55444231  # UDB1
 SCHEMA_VERSION = 1
@@ -25,7 +25,7 @@ def connect(database_path: Path) -> Iterator[sqlite3.Connection]:
 
 
 def _timestamp() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+    return datetime.now(UTC).isoformat(timespec="seconds")
 
 
 def create_project_database(database_path: Path, name: str, dataset_path: str) -> None:
@@ -56,7 +56,12 @@ def create_project_database(database_path: Path, name: str, dataset_path: str) -
         format TEXT,
         file_hash TEXT,
         status TEXT NOT NULL DEFAULT 'Pending'
-            CHECK (status IN ('Pending', 'Normalized', 'Captioned', 'Reviewed', 'Failed', 'Excluded'))
+            CHECK (
+                status IN (
+                    'Pending', 'Normalized', 'Captioned',
+                    'Reviewed', 'Failed', 'Excluded'
+                )
+            )
     );
 
     CREATE TABLE captions (
