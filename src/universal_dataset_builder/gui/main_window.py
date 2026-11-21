@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
 from universal_dataset_builder.core.config import ConfigStore
 from universal_dataset_builder.core.project import Project
 from universal_dataset_builder.gui.pages.dashboard import DashboardPage
+from universal_dataset_builder.gui.pages.dataset import DatasetPage
 from universal_dataset_builder.gui.pages.placeholder import PlaceholderPage
 from universal_dataset_builder.gui.pages.settings import SettingsPage
 from universal_dataset_builder.gui.styles.theme_manager import ThemeManager
@@ -50,6 +51,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Universal Dataset Builder")
 
         central = QWidget()
+        central.setObjectName("CentralWidget")
         self.setCentralWidget(central)
         root_layout = QHBoxLayout(central)
         root_layout.setContentsMargins(0, 0, 0, 0)
@@ -103,7 +105,11 @@ class MainWindow(QMainWindow):
         self.dashboard.open_project_requested.connect(self.open_project_dialog)
         self.pages.addWidget(self.dashboard)
 
-        for title, description in self.NAV_ITEMS[1:-1]:
+        self.dataset_page = DatasetPage()
+        self.dataset_page.scan_completed.connect(self._refresh_dashboard)
+        self.pages.addWidget(self.dataset_page)
+
+        for title, description in self.NAV_ITEMS[2:-1]:
             self.pages.addWidget(PlaceholderPage(title, description))
 
         self.settings_page = SettingsPage(self.config.get("theme", "dark"))
@@ -203,6 +209,7 @@ class MainWindow(QMainWindow):
     def _set_project(self, project: Project) -> None:
         self.project = project
         self.dashboard.set_project(project)
+        self.dataset_page.set_project(project)
         self.project_label.setText(project.name)
         self.project_status.setText(project.name)
         self.setWindowTitle(f"{project.name} — Universal Dataset Builder")
@@ -213,11 +220,16 @@ class MainWindow(QMainWindow):
     def close_project(self) -> None:
         self.project = None
         self.dashboard.set_project(None)
+        self.dataset_page.set_project(None)
         self.project_label.setText("No project open")
         self.project_status.setText("No project")
         self.setWindowTitle("Universal Dataset Builder")
         self.config.set("recent_project", None)
         self.config.save()
+
+    def _refresh_dashboard(self) -> None:
+        if self.project is not None:
+            self.dashboard.set_project(self.project)
 
     def _restore_recent_project(self) -> None:
         recent_project = self.config.get("recent_project")
