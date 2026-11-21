@@ -10,6 +10,7 @@ from pathlib import Path
 
 APPLICATION_ID = 0x55444231  # UDB1
 SCHEMA_VERSION = 1
+IMAGE_STATUSES = ("Pending", "Normalized", "Captioned", "Reviewed", "Failed", "Excluded")
 
 
 @contextmanager
@@ -166,16 +167,115 @@ def read_project_statistics(database_path: Path) -> dict[str, int]:
 
 
 def read_images(database_path: Path) -> list[dict[str, object]]:
-    """Return indexed image records for the dataset browser."""
+    """Return indexed images together with their latest caption, if one exists."""
     read_project_metadata(database_path)
     with connect(database_path) as connection:
         rows = connection.execute(
             """
             SELECT
-                image_id, filename, original_filename, original_path,
-                normalized_path, width, height, format, file_hash, status
+                images.image_id,
+                images.filename,
+                images.original_filename,
+                images.original_path,
+                images.normalized_path,
+                images.width,
+                images.height,
+                images.format,
+                images.file_hash,
+                images.status,
+                COALESCE((
+                    SELECT captions.caption_text
+                    FROM captions
+                    WHERE captions.image_id = images.image_id
+                    ORDER BY captions.caption_id DESC
+                    LIMIT 1
+                ), '') AS caption_text,
+                COALESCE((
+                    SELECT captions.reviewed
+                    FROM captions
+                    WHERE captions.image_id = images.image_id
+                    ORDER BY captions.caption_id DESC
+                    LIMIT 1
+                ), 0) AS caption_reviewed
             FROM images
-            ORDER BY filename COLLATE NOCASE, filename
+            ORDER BY images.filename COLLATE NOCASE, images.filename
             """
         ).fetchall()
     return [dict(row) for row in rows]
+
+
+def save_image_caption(database_path: Path, image_id: int, caption_text: str) -> str | None:
+    """Save one reviewed caption and return the normalized image path, if present."""
+    clean_caption = caption_text.strip()
+    if not clean_caption:
+        raise ValueError("Caption cannot be empty.")
+
+    with connect(database_path) as connection:
+        image = connection.execute(
+            "SELECT normalized_path FROM images WHERE image_id = ?",
+            (image_id,),
+        ).fetchone()
+        if image is None:
+            raise ValueError(f"Image record {image_id} does not exist.")
+
+        connection.execute("DELETE FROM captions WHERE image_id = ?", (image_id,))
+        now = _timestamp()
+        connection.execute(
+            """
+            INSERT INTO captions (image_id, caption_text, generated_at, reviewed)
+            VALUES (?, ?, ?, 1)
+            """,
+            (image_id, clean_caption, now),
+        )
+        connection.execute(
+            "UPDATE images SET status = 'Reviewed' WHERE image_id = ?",
+            (image_id,),
+        )
+        connection.execute(
+            "UPDATE projects SET updated_at = ? WHERE project_id = 1",
+            (now,),
+        )
+        connection.commit()
+
+    normalized_path = image["normalized_path"]
+    return str(normalized_path) if normalized_path else None
+
+
+def set_image_status(database_path: Path, image_id: int, status: str) -> None:
+    """Update an image status while enforcing caption prerequisites."""
+    if status not in IMAGE_STATUSES:
+        raise ValueError(f"Unsupported image status: {status}")
+
+    with connect(database_path) as connection:
+        image = connection.execute(
+            "SELECT image_id FROM images WHERE image_id = ?",
+            (image_id,),
+        ).fetchone()
+        if image is None:
+            raise ValueError(f"Image record {image_id} does not exist.")
+
+        caption = connection.execute(
+            """
+            SELECT 1 FROM captions
+            WHERE image_id = ? AND TRIM(caption_text) <> ''
+            LIMIT 1
+            """,
+            (image_id,),
+        ).fetchone()
+        if status in {"Captioned", "Reviewed"} and caption is None:
+            raise ValueError(f"An image needs a caption before it can be marked {status}.")
+
+        now = _timestamp()
+        connection.execute(
+            "UPDATE images SET status = ? WHERE image_id = ?",
+            (status, image_id),
+        )
+        connection.execute(
+            "UPDATE captions SET reviewed = ? WHERE image_id = ?",
+            (1 if status == "Reviewed" else 0, image_id),
+        )
+        connection.execute(
+            "UPDATE projects SET updated_at = ? WHERE project_id = 1",
+            (now,),
+        )
+        connection.commit()
