@@ -118,7 +118,7 @@ class NormalizerPage(QWidget):
 
     def _update_controls(self) -> None:
         busy = self._worker is not None
-        self.start_button.setEnabled(self.project is not None)
+        self.start_button.setEnabled(busy or self.project is not None)
         self.start_button.setText("Cancel normalization" if busy else "Normalize images")
         if busy:
             self.start_button.clicked.disconnect()

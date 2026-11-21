@@ -3,15 +3,14 @@ from __future__ import annotations
 import hashlib
 import shutil
 
-import pytest
-from PIL import Image, ImageCms
+from PIL import Image
 
 from universal_dataset_builder.core.project import Project
 from universal_dataset_builder.dataset.normalizer import normalize_project_images
 from universal_dataset_builder.storage.database import connect, read_images
 
 
-def _index_image(project, image_path):
+def _index_image(project, _image_path):
     from universal_dataset_builder.dataset.scanner import scan_directory
 
     scan_directory(project.path, project.source_path)
@@ -195,3 +194,64 @@ def test_invalid_icc_profile_is_reported_without_output(tmp_path):
     assert summary.failed == 1
     assert summary.normalized == 0
     assert not (project.dataset_path / "00001.png").exists()
+
+
+
+def test_normalizer_requires_rescan_when_source_changed(tmp_path):
+    project = Project.create(tmp_path / "project", "Changed source test")
+    source = project.source_path / "source.png"
+    Image.new("RGB", (10, 10), "red").save(source)
+    _index_image(project, source)
+    Image.new("RGB", (10, 10), "blue").save(source)
+
+    summary = normalize_project_images(
+        project.path, project.source_path, project.dataset_path
+    )
+
+    assert summary.failed == 1
+    assert "Run Scan source first" in summary.failed_files[0]
+    assert not (project.dataset_path / "00001.png").exists()
+
+
+def test_normalizer_sorts_and_uses_custom_start_number(tmp_path):
+    project = Project.create(tmp_path / "project", "Sorting test")
+    Image.new("RGB", (5, 5), "red").save(project.source_path / "zebra.png")
+    Image.new("RGB", (5, 5), "blue").save(project.source_path / "ant.png")
+    _index_image(project, project.source_path / "zebra.png")
+
+    summary = normalize_project_images(
+        project.path,
+        project.source_path,
+        project.dataset_path,
+        start_number=42,
+        sort_mode="filename_asc",
+    )
+
+    rows = read_images(project.path)
+    paths_by_source = {row["filename"]: Path(row["normalized_path"]).name for row in rows}
+    assert paths_by_source == {"ant.png": "00042.png", "zebra.png": "00043.png"}
+    assert summary.normalized == 2
+
+
+def test_normalizer_can_be_cancelled_between_images(tmp_path):
+    project = Project.create(tmp_path / "project", "Cancellation test")
+    Image.new("RGB", (5, 5), "red").save(project.source_path / "a.png")
+    Image.new("RGB", (5, 5), "blue").save(project.source_path / "b.png")
+    _index_image(project, project.source_path / "a.png")
+    cancel = [False]
+
+    def progress(current, total, filename):
+        if current >= 1:
+            cancel[0] = True
+
+    summary = normalize_project_images(
+        project.path,
+        project.source_path,
+        project.dataset_path,
+        progress_callback=progress,
+        cancel_requested=lambda: cancel[0],
+    )
+
+    assert summary.cancelled
+    assert summary.normalized == 1
+    assert len(list(project.dataset_path.glob("*.png"))) == 1

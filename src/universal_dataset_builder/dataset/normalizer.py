@@ -41,6 +41,15 @@ def _srgb_profile_bytes() -> bytes:
     return profile.tobytes()
 
 
+def _file_sha256(path: Path) -> str:
+    """Hash the current source file to detect changes since the last scan."""
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def _image_fingerprint(image: Image.Image) -> str:
     """Hash canonical output pixels to identify visual duplicates exactly."""
     digest = hashlib.sha256()
@@ -67,6 +76,9 @@ def _prepare_image(
                 rgba = image.convert("RGBA")
                 alpha = rgba.getchannel("A")
                 base = rgba.convert("RGB")
+            elif image.mode in {"RGB", "CMYK", "L"}:
+                # Keep profiled CMYK and grayscale data in their source mode.
+                base = image.copy()
             else:
                 base = image.convert("RGB")
 
@@ -84,7 +96,7 @@ def _prepare_image(
                 )
             else:
                 # Images without an embedded profile are interpreted as sRGB.
-                srgb = base
+                srgb = base.convert("RGB")
 
             if alpha is not None and alpha_mode == "preserve":
                 result = srgb.convert("RGBA")
@@ -237,6 +249,12 @@ def normalize_project_images(
             source_path = _safe_child_path(source_root, Path(str(row["original_path"])))
             if not source_path.is_file():
                 raise FileNotFoundError(f"Source image is missing: {source_path}")
+
+            recorded_hash = row.get("file_hash")
+            if recorded_hash and _file_sha256(source_path) != recorded_hash:
+                raise ValueError(
+                    "Source image changed since the last scan. Run Scan source first."
+                )
 
             image, fingerprint = _prepare_image(source_path, alpha_mode)
             if fingerprint in seen_fingerprints and skip_duplicates:
