@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import Signal, QThreadPool
+from PySide6.QtCore import QThreadPool, Signal
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QHeaderView,
