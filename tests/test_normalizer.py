@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import shutil
 from pathlib import Path
 
@@ -142,8 +143,8 @@ def test_normalizer_resumes_and_never_overwrites_existing_files(tmp_path):
     assert (collision_project.dataset_path / "00002.png").is_file()
 
 
-def test_normalizer_copies_existing_captions_and_keeps_reviewed_status(tmp_path):
-    project = Project.create(tmp_path / "project", "Caption sidecar test")
+def test_normalizer_adds_existing_captions_to_jsonl_and_keeps_reviewed_status(tmp_path):
+    project = Project.create(tmp_path / "project", "Caption metadata test")
     Image.new("RGB", (10, 10), "purple").save(project.source_path / "a.png")
     _index_image(project, project.source_path / "a.png")
     with connect(project.path) as connection:
@@ -162,9 +163,12 @@ def test_normalizer_copies_existing_captions_and_keeps_reviewed_status(tmp_path)
     )
 
     assert summary.normalized == 1
-    assert (project.dataset_path / "00001.txt").read_text(encoding="utf-8") == (
-        "A purple square.\n"
-    )
+    records = [
+        json.loads(line)
+        for line in project.metadata_path.read_text(encoding="utf-8").splitlines()
+    ]
+    assert records == [{"image": "00001.png", "prompt": "A purple square."}]
+    assert not list(project.dataset_path.glob("*.txt"))
     assert read_images(project.path)[0]["status"] == "Reviewed"
 
 
@@ -195,7 +199,6 @@ def test_invalid_icc_profile_is_reported_without_output(tmp_path):
     assert summary.failed == 1
     assert summary.normalized == 0
     assert not (project.dataset_path / "00001.png").exists()
-
 
 
 def test_normalizer_requires_rescan_when_source_changed(tmp_path):
@@ -256,7 +259,6 @@ def test_normalizer_can_be_cancelled_between_images(tmp_path):
     assert summary.cancelled
     assert summary.normalized == 1
     assert len(list(project.dataset_path.glob("*.png"))) == 1
-
 
 
 def test_normalizer_converts_cmyk_source_to_rgb_png(tmp_path):

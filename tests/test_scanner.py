@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import json
+
 from PIL import Image
 
 from universal_dataset_builder.core.project import Project
+from universal_dataset_builder.dataset.normalizer import normalize_project_images
 from universal_dataset_builder.dataset.scanner import scan_directory
 from universal_dataset_builder.storage.database import connect, read_images
 
@@ -46,32 +49,51 @@ def test_rescan_does_not_duplicate_unchanged_files(tmp_path):
     assert len(read_images(project.path)) == 1
 
 
-def test_changed_source_image_invalidates_old_caption(tmp_path):
+def test_changed_source_image_invalidates_caption_and_jsonl_pair(tmp_path):
     project = Project.create(tmp_path / "project", "Changed image test")
     image_path = project.source_path / "image.png"
     Image.new("RGB", (10, 10), "green").save(image_path)
     scan_directory(project.path, project.source_path)
+    normalize_project_images(project.path, project.source_path, project.dataset_path)
 
     with connect(project.path) as connection:
         image_id = connection.execute(
             "SELECT image_id FROM images WHERE filename = 'image.png'"
         ).fetchone()["image_id"]
         connection.execute(
-            "INSERT INTO captions (image_id, caption_text) VALUES (?, ?)",
+            """
+            INSERT INTO captions (image_id, caption_text, reviewed)
+            VALUES (?, ?, 1)
+            """,
             (image_id, "old caption"),
         )
+        connection.execute(
+            "UPDATE images SET status = 'Reviewed' WHERE image_id = ?",
+            (image_id,),
+        )
         connection.commit()
+
+    # Rebuild once to establish a previously valid training record.
+    from universal_dataset_builder.dataset.metadata import sync_training_metadata
+
+    sync_training_metadata(project.path, project.dataset_path)
+    assert json.loads(project.metadata_path.read_text(encoding="utf-8")) == {
+        "image": "00001.png",
+        "prompt": "old caption",
+    }
 
     Image.new("RGB", (18, 9), "purple").save(image_path)
     summary = scan_directory(project.path, project.source_path)
 
     assert summary.updated == 1
+    assert summary.metadata_warning is None
     image = read_images(project.path)[0]
     assert image["width"] == 18
     assert image["height"] == 9
     assert image["status"] == "Pending"
     with connect(project.path) as connection:
         assert connection.execute("SELECT COUNT(*) FROM captions").fetchone()[0] == 0
+    assert project.metadata_path.read_text(encoding="utf-8") == ""
 
 
 def test_non_recursive_scan_only_indexes_top_level_files(tmp_path):

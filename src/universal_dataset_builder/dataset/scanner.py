@@ -10,6 +10,7 @@ from pathlib import Path
 
 from PIL import Image, UnidentifiedImageError
 
+from universal_dataset_builder.dataset.metadata import sync_training_metadata
 from universal_dataset_builder.storage.database import connect, read_project_metadata
 
 SUPPORTED_EXTENSIONS = frozenset(
@@ -28,6 +29,7 @@ class ScanSummary:
     unchanged: int
     failed: int
     failed_files: tuple[str, ...]
+    metadata_warning: str | None = None
 
 
 def _sha256(path: Path) -> str:
@@ -111,11 +113,12 @@ def scan_directory(
     """Scan a directory without modifying source files and index images in SQLite.
 
     The source-relative path is used as the unique image filename, so equal
-    basenames in different subdirectories remain distinct.
+    basenames in different subdirectories remain distinct. After the database
+    is updated, the trainer metadata manifest is rebuilt to remove stale pairs.
     """
     database_path = Path(database_path).expanduser().resolve()
     source = Path(source_directory).expanduser().resolve()
-    read_project_metadata(database_path)
+    project_metadata = read_project_metadata(database_path)
     if not source.is_dir():
         raise NotADirectoryError(f"Source directory does not exist: {source}")
 
@@ -195,6 +198,15 @@ def scan_directory(
 
         connection.commit()
 
+    metadata_warning: str | None = None
+    try:
+        sync_training_metadata(
+            database_path,
+            Path(project_metadata["dataset_path"]),
+        )
+    except Exception as error:
+        metadata_warning = str(error)
+
     return ScanSummary(
         discovered=len(files),
         added=added,
@@ -202,4 +214,5 @@ def scan_directory(
         unchanged=unchanged,
         failed=failed,
         failed_files=tuple(failed_files),
+        metadata_warning=metadata_warning,
     )

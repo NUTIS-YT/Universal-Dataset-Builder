@@ -130,9 +130,7 @@ class CaptionGeneratorPage(QWidget):
 
         base_url = str(self.config.get("vlm_base_url", ""))
         if base_url and self.model_selector.count():
-            self.connection_label.setText(
-                f"Connected endpoint: {base_url}"
-            )
+            self.connection_label.setText(f"Connected endpoint: {base_url}")
         else:
             self.connection_label.setText(
                 "No model available. Open VLM Connection and test the API first."
@@ -225,9 +223,12 @@ class CaptionGeneratorPage(QWidget):
             f"{state}: {result.generated} generated · {result.failed} failed "
             f"· {result.discovered} selected."
         )
-        details = list(result.failed_files) + [
-            f"TXT sidecar: {warning}" for warning in result.sidecar_warnings
-        ]
+        details = list(result.failed_files)
+        if result.metadata_warning:
+            details.append(f"metadata.jsonl: {result.metadata_warning}")
+            self.status_label.setText(
+                self.status_label.text() + " JSONL update warning."
+            )
         self.status_label.setToolTip("\n".join(details[:20]))
         self.generation_completed.emit()
 

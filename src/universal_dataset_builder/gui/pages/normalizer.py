@@ -112,7 +112,10 @@ class NormalizerPage(QWidget):
                 "Create or open a project to configure image normalization."
             )
         else:
-            self.output_label.setText(f"Output directory: {project.dataset_path}")
+            self.output_label.setText(
+                f"Output directory: {project.dataset_path}\n"
+                f"Training metadata: {project.metadata_path.name}"
+            )
             self.status_label.setText("Ready to normalize indexed source images.")
         self._update_controls()
 
@@ -179,20 +182,21 @@ class NormalizerPage(QWidget):
             return
 
         state = "Cancelled" if result.cancelled else "Complete"
-        self.status_label.setText(
+        message = (
             f"{state}: {result.normalized} normalized · "
             f"{result.already_normalized} already present · "
             f"{result.duplicates} duplicates skipped · "
             f"{result.conflicts} filename conflicts avoided · "
             f"{result.failed} failed."
         )
-        if result.failed_files:
-            details = "\n".join(result.failed_files[:12])
-            if len(result.failed_files) > 12:
-                details += f"\n…and {len(result.failed_files) - 12} more."
-            self.status_label.setToolTip(details)
-        else:
-            self.status_label.setToolTip("")
+        if result.metadata_warning:
+            message += f" metadata.jsonl update failed: {result.metadata_warning}"
+        self.status_label.setText(message)
+
+        details = list(result.failed_files)
+        if result.metadata_warning:
+            details.append(f"metadata.jsonl: {result.metadata_warning}")
+        self.status_label.setToolTip("\n".join(details[:12]))
         self.normalization_completed.emit()
 
     def _normalization_failed(self, message: str) -> None:

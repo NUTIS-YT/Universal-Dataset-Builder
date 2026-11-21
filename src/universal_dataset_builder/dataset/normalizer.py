@@ -13,7 +13,7 @@ from pathlib import Path
 
 from PIL import Image, ImageCms, ImageOps, UnidentifiedImageError
 
-from universal_dataset_builder.dataset.caption_files import write_caption_sidecar
+from universal_dataset_builder.dataset.metadata import sync_training_metadata
 from universal_dataset_builder.storage.database import (
     connect,
     read_images,
@@ -33,6 +33,7 @@ class NormalizationSummary:
     failed: int
     cancelled: bool
     failed_files: tuple[str, ...]
+    metadata_warning: str | None = None
 
 
 def _srgb_profile_bytes() -> bytes:
@@ -278,9 +279,6 @@ def normalize_project_images(
                     Path(str(existing_normalized)),
                 )
                 if normalized_path.is_file():
-                    caption = str(row.get("caption_text") or "")
-                    if caption:
-                        write_caption_sidecar(dataset_root, normalized_path, caption)
                     already_normalized += 1
                     continue
 
@@ -300,18 +298,14 @@ def normalize_project_images(
                 break
 
             caption = str(row.get("caption_text") or "")
-            sidecar: Path | None = None
+            if caption and bool(row.get("caption_reviewed")):
+                new_status = "Reviewed"
+            elif caption:
+                new_status = "Captioned"
+            else:
+                new_status = "Normalized"
+
             try:
-                if caption:
-                    sidecar = write_caption_sidecar(dataset_root, destination, caption)
-
-                if caption and bool(row.get("caption_reviewed")):
-                    new_status = "Reviewed"
-                elif caption:
-                    new_status = "Captioned"
-                else:
-                    new_status = "Normalized"
-
                 with connect(database) as connection:
                     connection.execute(
                         """
@@ -324,8 +318,6 @@ def normalize_project_images(
                     connection.commit()
             except Exception:
                 destination.unlink(missing_ok=True)
-                if sidecar is not None:
-                    sidecar.unlink(missing_ok=True)
                 raise
 
             normalized += 1
@@ -347,6 +339,12 @@ def normalize_project_images(
             if progress_callback is not None:
                 progress_callback(processed, len(eligible), relative_name)
 
+    metadata_warning: str | None = None
+    try:
+        sync_training_metadata(database, dataset_root)
+    except Exception as error:
+        metadata_warning = str(error)
+
     if progress_callback is not None:
         progress_callback(
             processed,
@@ -363,4 +361,5 @@ def normalize_project_images(
         failed=failed,
         cancelled=cancelled,
         failed_files=tuple(failed_files),
+        metadata_warning=metadata_warning,
     )

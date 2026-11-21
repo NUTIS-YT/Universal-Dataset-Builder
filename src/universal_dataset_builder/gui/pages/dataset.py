@@ -26,7 +26,7 @@ from PySide6.QtWidgets import (
 )
 
 from universal_dataset_builder.core.project import Project
-from universal_dataset_builder.dataset.caption_files import write_caption_sidecar
+from universal_dataset_builder.dataset.metadata import sync_training_metadata
 from universal_dataset_builder.storage.database import (
     IMAGE_STATUSES,
     read_images,
@@ -261,10 +261,17 @@ class DatasetPage(QWidget):
         updated = getattr(summary, "updated", 0)
         unchanged = getattr(summary, "unchanged", 0)
         failed = getattr(summary, "failed", 0)
-        self.status_label.setText(
+        message = (
             f"Scan complete: {discovered} found · {added} added · "
             f"{updated} updated · {unchanged} unchanged · {failed} unreadable."
         )
+        metadata_warning = getattr(summary, "metadata_warning", None)
+        if metadata_warning:
+            message += f" metadata.jsonl update failed: {metadata_warning}"
+            self.status_label.setToolTip(str(metadata_warning))
+        else:
+            self.status_label.setToolTip("")
+        self.status_label.setText(message)
         self.scan_completed.emit()
 
     def _scan_failed(self, message: str) -> None:
@@ -426,14 +433,14 @@ class DatasetPage(QWidget):
         dialog.exec()
 
     def save_caption(self) -> None:
-        """Persist the edited caption and an adjacent TXT when normalized output exists."""
+        """Save the edited caption and synchronize the project JSONL manifest."""
         if self.project is None or self._selected_image_id is None:
             self.status_label.setText("Select an image before saving a caption.")
             return
 
         caption = self.caption_editor.toPlainText()
         try:
-            normalized_path = save_image_caption(
+            save_image_caption(
                 self.project.path,
                 self._selected_image_id,
                 caption,
@@ -442,22 +449,18 @@ class DatasetPage(QWidget):
             self.status_label.setText(f"Could not save caption: {error}")
             return
 
-        sidecar_message = ""
-        if normalized_path:
-            try:
-                write_caption_sidecar(
-                    self.project.dataset_path,
-                    Path(normalized_path),
-                    caption,
-                )
-                sidecar_message = " Caption TXT file updated."
-            except (OSError, ValueError) as error:
-                sidecar_message = f" Database saved, but TXT file was not updated: {error}"
+        try:
+            sync_training_metadata(self.project.path, self.project.dataset_path)
+        except Exception as error:
+            self.status_label.setText(
+                f"Caption saved, but metadata.jsonl could not be updated: {error}"
+            )
         else:
-            sidecar_message = " Caption stored in the project database."
+            self.status_label.setText(
+                "Caption saved and marked as Reviewed. metadata.jsonl updated."
+            )
 
         self._refresh_gallery()
-        self.status_label.setText("Caption saved and marked as Reviewed." + sidecar_message)
 
     def apply_selected_status(self) -> None:
         """Apply the selected status after validating the caption prerequisites."""
@@ -469,6 +472,15 @@ class DatasetPage(QWidget):
         except (OSError, ValueError) as error:
             QMessageBox.warning(self, "Cannot change image status", str(error))
             return
+
+        try:
+            sync_training_metadata(self.project.path, self.project.dataset_path)
+        except Exception as error:
+            QMessageBox.warning(
+                self,
+                "Metadata update failed",
+                f"Image status changed, but metadata.jsonl could not be updated: {error}",
+            )
 
         self._refresh_gallery()
         self.status_label.setText(f"Image status changed to {status}.")

@@ -7,10 +7,14 @@ from pathlib import Path
 
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
+    QComboBox,
+    QDialog,
+    QDialogButtonBox,
     QFileDialog,
+    QFormLayout,
     QHBoxLayout,
-    QInputDialog,
     QLabel,
+    QLineEdit,
     QMainWindow,
     QMessageBox,
     QPushButton,
@@ -21,6 +25,7 @@ from PySide6.QtWidgets import (
 
 from universal_dataset_builder.core.config import ConfigStore
 from universal_dataset_builder.core.project import Project
+from universal_dataset_builder.dataset.metadata import JSONL_METADATA_FORMAT
 from universal_dataset_builder.gui.pages.caption_generator import CaptionGeneratorPage
 from universal_dataset_builder.gui.pages.dashboard import DashboardPage
 from universal_dataset_builder.gui.pages.dataset import DatasetPage
@@ -30,6 +35,48 @@ from universal_dataset_builder.gui.pages.vlm_connection import VLMConnectionPage
 from universal_dataset_builder.gui.styles.theme_manager import ThemeManager
 
 LOGGER = logging.getLogger(__name__)
+
+
+class ProjectCreationDialog(QDialog):
+    """Collect the project name and training metadata format."""
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Create project")
+        self.setMinimumWidth(440)
+
+        layout = QVBoxLayout(self)
+        form = QFormLayout()
+        form.setHorizontalSpacing(18)
+        form.setVerticalSpacing(12)
+
+        self.name_edit = QLineEdit()
+        self.name_edit.setPlaceholderText("My dataset")
+        form.addRow("Project name", self.name_edit)
+
+        self.metadata_format_selector = QComboBox()
+        self.metadata_format_selector.addItem("JSON Lines (.jsonl)", JSONL_METADATA_FORMAT)
+        self.metadata_format_selector.setObjectName("MetadataFormatSelector")
+        form.addRow("Training metadata format", self.metadata_format_selector)
+
+        layout.addLayout(form)
+        note = QLabel("JSONL is currently the only supported metadata format.")
+        note.setObjectName("MutedText")
+        note.setWordWrap(True)
+        layout.addWidget(note)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok
+            | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    @property
+    def metadata_format(self) -> str:
+        """Return the selected project metadata format."""
+        return str(self.metadata_format_selector.currentData())
 
 
 class MainWindow(QMainWindow):
@@ -171,10 +218,11 @@ class MainWindow(QMainWindow):
         self.setStyleSheet(ThemeManager.stylesheet(theme))
 
     def create_project(self) -> None:
-        name, accepted = QInputDialog.getText(self, "Create project", "Project name:")
-        if not accepted:
+        dialog = ProjectCreationDialog(self)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
             return
-        clean_name = name.strip()
+
+        clean_name = dialog.name_edit.text().strip()
         if (
             not clean_name
             or clean_name in {".", ".."}
@@ -193,12 +241,17 @@ class MainWindow(QMainWindow):
             return
 
         try:
-            project = Project.create(Path(parent_directory) / clean_name, clean_name)
+            project = Project.create(
+                Path(parent_directory) / clean_name,
+                clean_name,
+                metadata_format=dialog.metadata_format,
+            )
             self._set_project(project)
             QMessageBox.information(
                 self,
                 "Project created",
-                f"Project '{project.name}' was created successfully.",
+                f"Project '{project.name}' was created successfully.\n"
+                f"Training metadata: {project.metadata_path.name}",
             )
         except (OSError, ValueError) as error:
             LOGGER.exception("Could not create project")

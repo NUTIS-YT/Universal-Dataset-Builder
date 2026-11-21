@@ -9,7 +9,7 @@ from threading import Event
 
 from PySide6.QtCore import QObject, QRunnable, Signal, Slot
 
-from universal_dataset_builder.dataset.caption_files import write_caption_sidecar
+from universal_dataset_builder.dataset.metadata import sync_training_metadata
 from universal_dataset_builder.storage.database import (
     read_images,
     save_generated_caption,
@@ -28,7 +28,7 @@ class CaptionSummary:
     failed: int
     cancelled: bool
     failed_files: tuple[str, ...]
-    sidecar_warnings: tuple[str, ...]
+    metadata_warning: str | None = None
 
 
 def select_caption_targets(
@@ -133,7 +133,7 @@ class CaptionWorker(QRunnable):
             failed = 0
             cancelled = False
             failed_files: list[str] = []
-            sidecar_warnings: list[str] = []
+            metadata_warning: str | None = None
 
             with OpenAICompatibleClient(
                 self.base_url,
@@ -154,22 +154,13 @@ class CaptionWorker(QRunnable):
                             self.dataset_directory,
                         )
                         caption = client.caption_image(image_path, self.prompt, self.model)
-                        normalized_path = save_generated_caption(
+                        save_generated_caption(
                             self.database_path,
                             int(row["image_id"]),
                             caption,
                             model_name=self.model,
                             prompt_template=self.prompt,
                         )
-                        if normalized_path:
-                            try:
-                                write_caption_sidecar(
-                                    self.dataset_directory,
-                                    Path(normalized_path),
-                                    caption,
-                                )
-                            except (OSError, ValueError) as error:
-                                sidecar_warnings.append(f"{filename}: {error}")
                         generated += 1
                     except Exception as error:
                         LOGGER.exception("Caption generation failed for %s", filename)
@@ -178,6 +169,13 @@ class CaptionWorker(QRunnable):
                     finally:
                         self.signals.progress.emit(index, len(targets), filename)
 
+            if generated:
+                try:
+                    sync_training_metadata(self.database_path, self.dataset_directory)
+                except Exception as error:
+                    LOGGER.exception("Could not update JSONL training metadata")
+                    metadata_warning = str(error)
+
             self.signals.completed.emit(
                 CaptionSummary(
                     discovered=len(targets),
@@ -185,7 +183,7 @@ class CaptionWorker(QRunnable):
                     failed=failed,
                     cancelled=cancelled,
                     failed_files=tuple(failed_files),
-                    sidecar_warnings=tuple(sidecar_warnings),
+                    metadata_warning=metadata_warning,
                 )
             )
         except Exception as error:

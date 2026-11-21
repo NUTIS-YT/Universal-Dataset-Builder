@@ -1,11 +1,17 @@
 from __future__ import annotations
 
+import json
+
 from PIL import Image
 from PySide6.QtWidgets import QApplication
 
 from universal_dataset_builder.core.project import Project
+from universal_dataset_builder.dataset.normalizer import normalize_project_images
 from universal_dataset_builder.dataset.scanner import scan_directory
-from universal_dataset_builder.gui.main_window import MainWindow
+from universal_dataset_builder.gui.main_window import (
+    MainWindow,
+    ProjectCreationDialog,
+)
 from universal_dataset_builder.gui.pages.caption_generator import CaptionGeneratorPage
 from universal_dataset_builder.gui.pages.dataset import DatasetPage
 from universal_dataset_builder.gui.pages.normalizer import NormalizerPage
@@ -19,6 +25,19 @@ def _application():
     if application is None:
         application = QApplication([])
     return application
+
+
+def test_project_creation_dialog_offers_jsonl_metadata_only(monkeypatch):
+    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+    application = _application()
+
+    dialog = ProjectCreationDialog()
+    assert dialog.metadata_format_selector.count() == 1
+    assert dialog.metadata_format_selector.itemData(0) == "jsonl"
+    assert dialog.metadata_format == "jsonl"
+
+    dialog.close()
+    application.processEvents()
 
 
 def test_main_window_builds_navigation_and_switches_theme(tmp_path, monkeypatch):
@@ -69,6 +88,7 @@ def test_dataset_browser_shows_images_and_saves_captions(tmp_path, monkeypatch):
     project = Project.create(tmp_path / "dataset-project", "Browser test")
     Image.new("RGB", (80, 50), "navy").save(project.source_path / "wolf.png")
     scan_directory(project.path, project.source_path)
+    normalize_project_images(project.path, project.source_path, project.dataset_path)
 
     page = DatasetPage()
     page.resize(900, 650)
@@ -85,6 +105,17 @@ def test_dataset_browser_shows_images_and_saves_captions(tmp_path, monkeypatch):
     assert image["caption_text"] == "A gray anthropomorphic wolf with blue eyes."
     assert image["status"] == "Reviewed"
     assert image["caption_reviewed"] == 1
+    records = [
+        json.loads(line)
+        for line in project.metadata_path.read_text(encoding="utf-8").splitlines()
+    ]
+    assert records == [
+        {
+            "image": "00001.png",
+            "prompt": "A gray anthropomorphic wolf with blue eyes.",
+        }
+    ]
+    assert not list(project.dataset_path.glob("*.txt"))
 
     page.status_filter.setCurrentIndex(page.status_filter.findData("Excluded"))
     assert page.gallery.count() == 0
