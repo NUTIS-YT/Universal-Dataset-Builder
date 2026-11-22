@@ -256,7 +256,7 @@ class _ConnectionPageState extends State<ConnectionPage> {
           const SizedBox(height: 16),
           const SectionCard(
             title: 'Connection notes',
-            child: const Column(
+            child: Column(
               children: [
                 _ConnectionNote(
                   icon: Icons.lock_outline_rounded,
