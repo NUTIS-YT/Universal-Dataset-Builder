@@ -1,0 +1,66 @@
+name: Flutter UI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "flutter_app/**"
+      - ".github/workflows/flutter.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "flutter_app/**"
+      - ".github/workflows/flutter.yml"
+
+jobs:
+  flutter:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+          - os: windows-latest
+            platform: windows
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: flutter-actions/setup-flutter@v4
+        with:
+          channel: stable
+          version: "3.50.0"
+          cache: true
+          cache-sdk: true
+
+      - name: Install Linux desktop build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
+
+      - name: Generate desktop runners
+        working-directory: flutter_app
+        run: flutter create --platforms=linux,windows --project-name universal_dataset_builder_expressive --org com.ericnorthwest --no-pub .
+
+      - name: Install Flutter dependencies
+        working-directory: flutter_app
+        run: flutter pub get
+
+      - name: Validate Dart formatting
+        working-directory: flutter_app
+        run: dart format --output=none lib test
+
+      - name: Analyze Flutter source
+        working-directory: flutter_app
+        run: flutter analyze
+
+      - name: Run Flutter tests
+        working-directory: flutter_app
+        run: flutter test
+
+      - name: Build desktop application
+        working-directory: flutter_app
+        run: flutter build ${{ matrix.platform }} --release

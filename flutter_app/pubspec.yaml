@@ -1,0 +1,21 @@
+name: universal_dataset_builder_expressive
+description: Expressive Flutter desktop interface for Universal Dataset Builder.
+publish_to: none
+version: 0.2.0+1
+
+environment:
+  sdk: ">=3.11.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.6.0
+  shared_preferences: ^2.5.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true

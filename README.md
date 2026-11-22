@@ -42,6 +42,14 @@ Run tests and lint checks:
     uv run pytest
     uv run ruff check .
 
+## Expressive UI (Flutter beta)
+
+A separate Flutter desktop client is being developed in `flutter_app/`. It uses the same local FastAPI service as the Legacy PySide6 interface and does not access project SQLite files directly.
+
+The first Expressive milestone includes Dashboard, Dataset Browser, Normalizer, Caption Generator (including project character reference), VLM Connection, and Appearance settings. Its motion system is optional: users can disable animations or choose Gentle and Expressive profiles. Theme and motion preferences are stored locally; project settings remain in `project.fdb`.
+
+To prepare and run the desktop client, see [flutter_app/README.md](flutter_app/README.md). In short, start `uv run udb-api` in one terminal and run `flutter run -d linux` or `flutter run -d windows` from `flutter_app/` in another.
+
 ## Project layout
 
     MyDataset/
