@@ -66,7 +66,7 @@ def test_dataset_service_caption_and_status_sync_manifest(tmp_path):
     assert warning is None
     assert DatasetService.list_images(project.path)[0]["status"] == "Reviewed"
     assert project.metadata_path.read_text(encoding="utf-8").strip() == (
-        '{"image":"00001.png","prompt":"A teal square."}'
+        '{"image": "00001.png", "prompt": "A teal square."}'
     )
 
     warning = DatasetService.set_status(
