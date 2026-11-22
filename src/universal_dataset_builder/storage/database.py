@@ -326,3 +326,73 @@ def set_image_status(database_path: Path, image_id: int, status: str) -> None:
             (now,),
         )
         connection.commit()
+
+
+def read_caption_character_settings(database_path: Path) -> dict[str, object]:
+    """Return character-reference options stored inside a project file."""
+    read_project_metadata(database_path)
+    with connect(database_path) as connection:
+        rows = connection.execute(
+            """
+            SELECT setting_key, setting_value
+            FROM settings
+            WHERE setting_key IN (
+                'caption_character_enabled',
+                'caption_character_description',
+                'caption_trigger_word'
+            )
+            """
+        ).fetchall()
+
+    values = {str(row["setting_key"]): str(row["setting_value"]) for row in rows}
+    return {
+        "enabled": values.get("caption_character_enabled", "0") == "1",
+        "description": values.get("caption_character_description", ""),
+        "trigger_word": values.get("caption_trigger_word", ""),
+    }
+
+
+def save_caption_character_settings(
+    database_path: Path,
+    *,
+    enabled: bool,
+    description: str,
+    trigger_word: str,
+) -> dict[str, object]:
+    """Persist character-reference options in the active project's database."""
+    if not isinstance(enabled, bool):
+        raise ValueError("Character-reference enabled state must be a boolean.")
+    if not isinstance(description, str) or len(description) > 10_000:
+        raise ValueError("Character description must be a string of at most 10000 characters.")
+    if not isinstance(trigger_word, str) or len(trigger_word) > 512:
+        raise ValueError("Trigger word must be a string of at most 512 characters.")
+
+    clean_description = description.strip()
+    clean_trigger_word = trigger_word.strip()
+    now = _timestamp()
+    values = {
+        "caption_character_enabled": "1" if enabled else "0",
+        "caption_character_description": clean_description,
+        "caption_trigger_word": clean_trigger_word,
+    }
+    with connect(database_path) as connection:
+        for key, value in values.items():
+            connection.execute(
+                """
+                INSERT INTO settings (setting_key, setting_value)
+                VALUES (?, ?)
+                ON CONFLICT(setting_key) DO UPDATE SET setting_value = excluded.setting_value
+                """,
+                (key, value),
+            )
+        connection.execute(
+            "UPDATE projects SET updated_at = ? WHERE project_id = 1",
+            (now,),
+        )
+        connection.commit()
+
+    return {
+        "enabled": enabled,
+        "description": clean_description,
+        "trigger_word": clean_trigger_word,
+    }
