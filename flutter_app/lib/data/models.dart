@@ -81,6 +81,30 @@ class DatasetImage {
       );
 }
 
+class DatasetImagePage {
+  const DatasetImagePage({
+    required this.items,
+    required this.total,
+    required this.offset,
+    required this.limit,
+  });
+
+  final List<DatasetImage> items;
+  final int total;
+  final int offset;
+  final int limit;
+
+  factory DatasetImagePage.fromJson(JsonMap json) => DatasetImagePage(
+        items: (json['items'] as List<dynamic>? ?? const [])
+            .whereType<Map>()
+            .map((item) => DatasetImage.fromJson(Map<String, dynamic>.from(item)))
+            .toList(),
+        total: (json['total'] as num?)?.toInt() ?? 0,
+        offset: (json['offset'] as num?)?.toInt() ?? 0,
+        limit: (json['limit'] as num?)?.toInt() ?? 100,
+      );
+}
+
 class JobSnapshot {
   const JobSnapshot({
     required this.id,
