@@ -30,12 +30,21 @@ VLM Connection uses an external OpenAI-compatible API. It retrieves available mo
     uv sync --all-groups
     uv run udb
 
-Start the local API server used by the Expressive UI:
-
-    uv run udb-api
+The desktop launcher lets you choose Legacy (PySide6) or Expressive UI Beta (Flutter).
+When Expressive is selected, the launcher starts the local API automatically,
+prepares the native Flutter runner on first use, resolves Flutter dependencies,
+and starts the UI. You do not need to launch the API in a separate terminal.
 
 The API listens on 127.0.0.1:17891 by default. It is intended for a local desktop
 frontend; do not expose it to a network without adding an authentication layer.
+
+For direct Legacy startup, use:
+
+    uv run udb-legacy
+
+For API-only debugging, use:
+
+    uv run udb-api
 
 Run tests and lint checks:
 
