@@ -167,7 +167,10 @@ def test_websocket_delivers_terminal_job_state(tmp_path):
         job_id = response.json()["job_id"]
         final = _wait_for_job(client, job_id)
 
-        with client.websocket_connect(f"/api/v1/ws/jobs/{job_id}") as websocket:
+        with client.websocket_connect(
+            f"/api/v1/ws/jobs/{job_id}",
+            headers={"host": "127.0.0.1"},
+        ) as websocket:
             message = websocket.receive_json()
         assert message["status"] == "completed"
         assert message["job_id"] == job_id
