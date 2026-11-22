@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from universal_dataset_builder.core.project import Project
+from universal_dataset_builder.dataset.metadata import JSONL_METADATA_FORMAT
 
 
 class ProjectService:
@@ -14,7 +15,7 @@ class ProjectService:
     def create(
         directory: Path,
         name: str,
-        metadata_format: str = "jsonl",
+        metadata_format: str = JSONL_METADATA_FORMAT,
     ) -> Project:
         """Create a project using the canonical project implementation."""
         return Project.create(directory, name, metadata_format=metadata_format)

@@ -16,6 +16,8 @@ from universal_dataset_builder.services.caption_service import (
 
 LOGGER = logging.getLogger(__name__)
 
+__all__ = ["CaptionWorker", "CaptionSummary", "select_caption_targets"]
+
 
 class CaptionWorkerSignals(QObject):
     """Signals emitted by a batch caption task."""
