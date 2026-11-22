@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../state/app_controller.dart';
@@ -16,8 +17,33 @@ class _DashboardPageState extends State<DashboardPage> {
   AppController get controller => widget.controller;
   bool _dialogBusy = false;
 
+  Future<void> _browseParentDirectory() async {
+    try {
+      final selected = await FilePicker.getDirectoryPath(
+        dialogTitle: 'Choose project parent folder',
+      );
+      if (selected != null) directoryPath.text = selected;
+    } catch (error) {
+      _showMessage('Could not open the folder picker: $error', error: true);
+    }
+  }
+
+  Future<void> _browseProjectFile() async {
+    try {
+      final selected = await FilePicker.pickFile(
+        dialogTitle: 'Open Universal Dataset Builder project',
+        type: FileType.custom,
+        allowedExtensions: ['fdb'],
+      );
+      final selectedPath = selected?.path;
+      if (selectedPath != null) projectPath.text = selectedPath;
+    } catch (error) {
+      _showMessage('Could not open the project picker: $error', error: true);
+    }
+  }
+
   Future<void> _showCreateProject() async {
-    final directory = TextEditingController();
+    final directoryPath = TextEditingController();
     final name = TextEditingController();
     final result = await showDialog<bool>(
       context: context,
@@ -39,11 +65,16 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
               const SizedBox(height: 12),
               TextField(
-                controller: directory,
-                decoration: const InputDecoration(
+                controller: directoryPath,
+                decoration: InputDecoration(
                   labelText: 'Parent folder',
                   hintText: '/home/user/Datasets',
-                  prefixIcon: Icon(Icons.folder_outlined),
+                  prefixIcon: const Icon(Icons.folder_outlined),
+                  suffixIcon: IconButton(
+                    tooltip: 'Browse for folder',
+                    onPressed: _browseParentDirectory,
+                    icon: const Icon(Icons.folder_open_rounded),
+                  ),
                   helperText: 'The project folder will be created inside this directory.',
                 ),
               ),
@@ -63,26 +94,26 @@ class _DashboardPageState extends State<DashboardPage> {
       ),
     );
     if (result != true) {
-      directory.dispose();
+      directoryPath.dispose();
       name.dispose();
       return;
     }
 
     setState(() => _dialogBusy = true);
     try {
-      await controller.createProject(directory.text, name.text);
+      await controller.createProject(directoryPath.text, name.text);
       _showMessage('Project created.');
     } catch (error) {
       _showMessage(error.toString(), error: true);
     } finally {
-      directory.dispose();
+      directoryPath.dispose();
       name.dispose();
       if (mounted) setState(() => _dialogBusy = false);
     }
   }
 
   Future<void> _showOpenProject() async {
-    final path = TextEditingController();
+    final projectPath = TextEditingController();
     final result = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -90,12 +121,17 @@ class _DashboardPageState extends State<DashboardPage> {
         content: SizedBox(
           width: 440,
           child: TextField(
-            controller: path,
+            controller: projectPath,
             autofocus: true,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'Path to project.fdb',
               hintText: '/home/user/Datasets/MyDataset/project.fdb',
-              prefixIcon: Icon(Icons.folder_open_rounded),
+              prefixIcon: const Icon(Icons.folder_open_rounded),
+              suffixIcon: IconButton(
+                tooltip: 'Browse for project file',
+                onPressed: _browseProjectFile,
+                icon: const Icon(Icons.folder_open_rounded),
+              ),
             ),
           ),
         ),
@@ -112,18 +148,18 @@ class _DashboardPageState extends State<DashboardPage> {
       ),
     );
     if (result != true) {
-      path.dispose();
+      projectPath.dispose();
       return;
     }
 
     setState(() => _dialogBusy = true);
     try {
-      await controller.openProject(path.text);
+      await controller.openProject(projectPath.text);
       _showMessage('Project opened.');
     } catch (error) {
       _showMessage(error.toString(), error: true);
     } finally {
-      path.dispose();
+      projectPath.dispose();
       if (mounted) setState(() => _dialogBusy = false);
     }
   }
