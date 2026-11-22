@@ -171,9 +171,10 @@ class CaptionGeneratorPage(QWidget):
 
     def _update_character_controls(self) -> None:
         has_project = self.project is not None
-        self.character_reference_checkbox.setEnabled(has_project)
+        busy = self._worker is not None
+        self.character_reference_checkbox.setEnabled(has_project and not busy)
         self.character_fields.setEnabled(
-            has_project and self.character_reference_checkbox.isChecked()
+            has_project and not busy and self.character_reference_checkbox.isChecked()
         )
 
     def _save_character_settings(self, _value: object = None) -> None:
