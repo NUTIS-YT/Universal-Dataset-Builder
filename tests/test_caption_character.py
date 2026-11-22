@@ -9,6 +9,7 @@ from universal_dataset_builder.api.app import create_app
 from universal_dataset_builder.core.config import ConfigStore
 from universal_dataset_builder.core.project import Project
 from universal_dataset_builder.services import caption_service
+from universal_dataset_builder.services.caption_service import prepend_trigger_word
 from universal_dataset_builder.storage.database import (
     connect,
     read_caption_character_settings,
@@ -51,13 +52,16 @@ def test_caption_generation_uses_character_context_and_prepends_trigger(
     source_image = project.source_path / "view.png"
     Image.new("RGB", (32, 24), "purple").save(source_image)
 
+    normalized_image = project.dataset_path / "00001.png"
+    Image.new("RGB", (32, 24), "purple").save(normalized_image)
     with connect(project.path) as connection:
         connection.execute(
             """
-            INSERT INTO images (filename, original_filename, original_path, status)
-            VALUES (?, ?, ?, 'Pending')
+            INSERT INTO images (
+                filename, original_filename, original_path, normalized_path, status
+            ) VALUES (?, ?, ?, ?, 'Pending')
             """,
-            ("view.png", "view.png", str(source_image)),
+            ("00001.png", "view.png", str(source_image), str(normalized_image)),
         )
         connection.commit()
 
@@ -118,13 +122,16 @@ def test_character_reference_can_be_disabled_without_deleting_saved_values(tmp_p
     source_image = project.source_path / "view.png"
     Image.new("RGB", (16, 16), "black").save(source_image)
 
+    normalized_image = project.dataset_path / "00001.png"
+    Image.new("RGB", (16, 16), "black").save(normalized_image)
     with connect(project.path) as connection:
         connection.execute(
             """
-            INSERT INTO images (filename, original_filename, original_path, status)
-            VALUES (?, ?, ?, 'Pending')
+            INSERT INTO images (
+                filename, original_filename, original_path, normalized_path, status
+            ) VALUES (?, ?, ?, ?, 'Pending')
             """,
-            ("view.png", "view.png", str(source_image)),
+            ("00001.png", "view.png", str(source_image), str(normalized_image)),
         )
         connection.commit()
 
@@ -213,3 +220,11 @@ def test_api_reads_and_updates_project_character_settings(tmp_path):
         database_path = tmp_path / "API Character" / "project.fdb"
         assert Project.open(database_path).path == database_path
         assert read_caption_character_settings(database_path) == updated.json()
+
+
+
+def test_prepend_trigger_word_does_not_duplicate_existing_prefix():
+    assert prepend_trigger_word(
+        "star_character, A white-haired character.",
+        "star_character",
+    ) == "star_character, A white-haired character."
