@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from PySide6.QtCore import QThreadPool, Signal
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QFormLayout,
     QLabel,
+    QLineEdit,
     QProgressBar,
     QPushButton,
     QSpinBox,
@@ -17,6 +19,10 @@ from PySide6.QtWidgets import (
 
 from universal_dataset_builder.core.config import ConfigStore
 from universal_dataset_builder.core.project import Project
+from universal_dataset_builder.storage.database import (
+    read_caption_character_settings,
+    save_caption_character_settings,
+)
 from universal_dataset_builder.workers.caption_worker import CaptionSummary, CaptionWorker
 
 
@@ -73,8 +79,45 @@ class CaptionGeneratorPage(QWidget):
 
         self.prompt_editor = QTextEdit()
         self.prompt_editor.setPlainText(str(config.get("caption_prompt", "")))
-        self.prompt_editor.setMinimumHeight(150)
+        self.prompt_editor.setMinimumHeight(120)
         layout.addWidget(self.prompt_editor, 1)
+
+        character_title = QLabel("Character consistency")
+        character_title.setObjectName("SectionTitle")
+        layout.addWidget(character_title)
+
+        self.character_reference_checkbox = QCheckBox(
+            "Use character reference for this project"
+        )
+        self.character_reference_checkbox.toggled.connect(
+            self._save_character_settings
+        )
+        layout.addWidget(self.character_reference_checkbox)
+
+        self.character_fields = QWidget()
+        character_form = QFormLayout(self.character_fields)
+        character_form.setContentsMargins(0, 0, 0, 0)
+        character_form.setHorizontalSpacing(18)
+        character_form.setVerticalSpacing(8)
+
+        self.character_description_editor = QTextEdit()
+        self.character_description_editor.setPlaceholderText(
+            "Describe stable identity traits: species, colors, markings, face, "
+            "hair, characteristic accessories, and other details that should remain "
+            "consistent across viewpoints."
+        )
+        self.character_description_editor.setMinimumHeight(84)
+        self.character_description_editor.textChanged.connect(
+            self._save_character_settings
+        )
+        character_form.addRow("Character information", self.character_description_editor)
+
+        self.trigger_word_edit = QLineEdit()
+        self.trigger_word_edit.setMaxLength(512)
+        self.trigger_word_edit.setPlaceholderText("e.g. my_character")
+        self.trigger_word_edit.textChanged.connect(self._save_character_settings)
+        character_form.addRow("Trigger word", self.trigger_word_edit)
+        layout.addWidget(self.character_fields)
 
         self.progress = QProgressBar()
         self.progress.setRange(0, 1)
@@ -103,11 +146,56 @@ class CaptionGeneratorPage(QWidget):
     def set_project(self, project: Project | None) -> None:
         """Attach the active project."""
         self.project = project
+        self._load_character_settings()
         if project is None:
             self.status_label.setText("Create or open a project before generating captions.")
         else:
             self.status_label.setText("Ready to generate captions for this project.")
         self._update_controls()
+
+    def _load_character_settings(self) -> None:
+        """Load character-reference settings from the currently opened project."""
+        self._loading_character_settings = True
+        try:
+            settings = (
+                read_caption_character_settings(self.project.path)
+                if self.project is not None
+                else {"enabled": False, "description": "", "trigger_word": ""}
+            )
+            self.character_reference_checkbox.setChecked(bool(settings["enabled"]))
+            self.character_description_editor.setPlainText(str(settings["description"]))
+            self.trigger_word_edit.setText(str(settings["trigger_word"]))
+        finally:
+            self._loading_character_settings = False
+        self._update_character_controls()
+
+    def _update_character_controls(self) -> None:
+        has_project = self.project is not None
+        self.character_reference_checkbox.setEnabled(has_project)
+        self.character_fields.setEnabled(
+            has_project and self.character_reference_checkbox.isChecked()
+        )
+
+    def _save_character_settings(self, _value: object = None) -> None:
+        """Autosave changes directly into the active project's SQLite file."""
+        self._update_character_controls()
+        if self.project is None or getattr(self, "_loading_character_settings", False):
+            return
+        try:
+            save_caption_character_settings(
+                self.project.path,
+                enabled=self.character_reference_checkbox.isChecked(),
+                description=self.character_description_editor.toPlainText(),
+                trigger_word=self.trigger_word_edit.text(),
+            )
+        except (OSError, ValueError) as error:
+            self.character_reference_checkbox.setToolTip(
+                f"Could not save project character settings: {error}"
+            )
+        else:
+            self.character_reference_checkbox.setToolTip(
+                "Character settings are saved in this project's project.fdb file."
+            )
 
     def refresh_connection(self) -> None:
         """Reload the available model list after a connection change."""
@@ -144,6 +232,7 @@ class CaptionGeneratorPage(QWidget):
             self.config.save()
 
     def _update_controls(self) -> None:
+        self._update_character_controls()
         busy = self._worker is not None
         ready = bool(
             self.project is not None
@@ -169,6 +258,7 @@ class CaptionGeneratorPage(QWidget):
             self.status_label.setText("Select a model in VLM Connection first.")
             return
 
+        self._save_character_settings()
         self.config.set("caption_prompt", prompt)
         self.config.set("vlm_model", model)
         self.config.save()
