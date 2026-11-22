@@ -99,9 +99,16 @@ class _DashboardPageState extends State<DashboardPage> {
       return;
     }
 
+    if (directoryPath.text.trim().isEmpty || name.text.trim().isEmpty) {
+      _message('Choose a parent folder and enter a project name.', error: true);
+      directoryPath.dispose();
+      name.dispose();
+      return;
+    }
+
     setState(() => _dialogBusy = true);
     try {
-      await controller.createProject(directoryPath.text, name.text);
+      await controller.createProject(directoryPath.text.trim(), name.text.trim());
       _showMessage('Project created.');
     } catch (error) {
       _showMessage(error.toString(), error: true);
