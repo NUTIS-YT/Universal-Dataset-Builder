@@ -21,6 +21,7 @@ from universal_dataset_builder.api.jobs import (
     JobNotCancellableError,
 )
 from universal_dataset_builder.api.schemas import (
+    CaptionCharacterSettingsUpdateRequest,
     CaptionGenerationRequest,
     CaptionUpdateRequest,
     ImageStatusUpdateRequest,
@@ -36,6 +37,10 @@ from universal_dataset_builder.core.project import Project
 from universal_dataset_builder.services.caption_service import CaptionGenerationService
 from universal_dataset_builder.services.dataset_service import DatasetService
 from universal_dataset_builder.services.project_service import ProjectService
+from universal_dataset_builder.storage.database import (
+    read_caption_character_settings,
+    save_caption_character_settings,
+)
 from universal_dataset_builder.vlm.client import (
     OpenAICompatibleClient,
     VLMError,
@@ -212,6 +217,31 @@ def create_app(
         except ActiveJobError as error:
             raise HTTPException(status_code=409, detail=str(error)) from error
         return Response(status_code=204)
+
+    @app.get("/api/v1/project/caption-settings")
+    def get_caption_character_settings() -> dict[str, object]:
+        """Return character-reference options stored in the active project."""
+        project = require_project()
+        return read_caption_character_settings(project.path)
+
+    @app.put("/api/v1/project/caption-settings")
+    def update_caption_character_settings(
+        payload: CaptionCharacterSettingsUpdateRequest,
+    ) -> dict[str, object]:
+        """Save character-reference options into the active project file."""
+        try:
+            with mutation_guard():
+                project = require_project()
+                return save_caption_character_settings(
+                    project.path,
+                    enabled=payload.enabled,
+                    description=payload.description,
+                    trigger_word=payload.trigger_word,
+                )
+        except ActiveJobError as error:
+            raise HTTPException(status_code=409, detail=str(error)) from error
+        except (OSError, ValueError) as error:
+            raise HTTPException(status_code=400, detail=str(error)) from error
 
     @app.get("/api/v1/project/statistics")
     def project_statistics() -> dict[str, int]:
