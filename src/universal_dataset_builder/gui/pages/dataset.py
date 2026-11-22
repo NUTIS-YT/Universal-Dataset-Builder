@@ -26,13 +26,7 @@ from PySide6.QtWidgets import (
 )
 
 from universal_dataset_builder.core.project import Project
-from universal_dataset_builder.dataset.metadata import sync_training_metadata
-from universal_dataset_builder.storage.database import (
-    IMAGE_STATUSES,
-    read_images,
-    save_image_caption,
-    set_image_status,
-)
+from universal_dataset_builder.services.dataset_service import DatasetService
 from universal_dataset_builder.workers.scan_worker import ScanWorker
 
 
@@ -108,7 +102,7 @@ class DatasetPage(QWidget):
 
         self.status_filter = QComboBox()
         self.status_filter.addItem("All statuses", "")
-        for status in IMAGE_STATUSES:
+        for status in DatasetService.statuses:
             self.status_filter.addItem(status, status)
         self.status_filter.currentIndexChanged.connect(self._refresh_gallery)
         toolbar.addWidget(self.status_filter)
@@ -179,7 +173,7 @@ class DatasetPage(QWidget):
         status_row = QHBoxLayout()
         status_row.addWidget(QLabel("Image status"))
         self.status_editor = QComboBox()
-        for status in IMAGE_STATUSES:
+        for status in DatasetService.statuses:
             self.status_editor.addItem(status, status)
         status_row.addWidget(self.status_editor, 1)
         self.apply_status_button = QPushButton("Apply")
@@ -289,7 +283,7 @@ class DatasetPage(QWidget):
 
         selected_id = self._selected_image_id
         try:
-            rows = read_images(self.project.path)
+            rows = DatasetService.list_images(self.project.path)
         except (OSError, ValueError) as error:
             self.status_label.setText(f"Could not load indexed images: {error}")
             return
@@ -440,8 +434,9 @@ class DatasetPage(QWidget):
 
         caption = self.caption_editor.toPlainText()
         try:
-            save_image_caption(
+            metadata_warning = DatasetService.save_caption(
                 self.project.path,
+                self.project.dataset_path,
                 self._selected_image_id,
                 caption,
             )
@@ -449,11 +444,9 @@ class DatasetPage(QWidget):
             self.status_label.setText(f"Could not save caption: {error}")
             return
 
-        try:
-            sync_training_metadata(self.project.path, self.project.dataset_path)
-        except Exception as error:
+        if metadata_warning:
             self.status_label.setText(
-                f"Caption saved, but metadata.jsonl could not be updated: {error}"
+                f"Caption saved, but metadata.jsonl could not be updated: {metadata_warning}"
             )
         else:
             self.status_label.setText(
@@ -468,18 +461,22 @@ class DatasetPage(QWidget):
             return
         status = str(self.status_editor.currentData())
         try:
-            set_image_status(self.project.path, self._selected_image_id, status)
+            metadata_warning = DatasetService.set_status(
+                self.project.path,
+                self.project.dataset_path,
+                self._selected_image_id,
+                status,
+            )
         except (OSError, ValueError) as error:
             QMessageBox.warning(self, "Cannot change image status", str(error))
             return
 
-        try:
-            sync_training_metadata(self.project.path, self.project.dataset_path)
-        except Exception as error:
+        if metadata_warning:
             QMessageBox.warning(
                 self,
                 "Metadata update failed",
-                f"Image status changed, but metadata.jsonl could not be updated: {error}",
+                f"Image status changed, but metadata.jsonl could not be updated: "
+                f"{metadata_warning}",
             )
 
         self._refresh_gallery()

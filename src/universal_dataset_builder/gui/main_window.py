@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
 
 from universal_dataset_builder.core.config import ConfigStore
 from universal_dataset_builder.core.project import Project
+from universal_dataset_builder.services.project_service import ProjectService
 from universal_dataset_builder.dataset.metadata import JSONL_METADATA_FORMAT
 from universal_dataset_builder.gui.pages.caption_generator import CaptionGeneratorPage
 from universal_dataset_builder.gui.pages.dashboard import DashboardPage
@@ -94,6 +95,7 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.config = ConfigStore()
+        self.project_service = ProjectService()
         self.project: Project | None = None
         self.setMinimumSize(980, 640)
         self.resize(1180, 760)
@@ -241,7 +243,7 @@ class MainWindow(QMainWindow):
             return
 
         try:
-            project = Project.create(
+            project = self.project_service.create(
                 Path(parent_directory) / clean_name,
                 clean_name,
                 metadata_format=dialog.metadata_format,
@@ -269,7 +271,7 @@ class MainWindow(QMainWindow):
 
     def _open_project(self, path: Path) -> None:
         try:
-            self._set_project(Project.open(path))
+            self._set_project(self.project_service.open(path))
         except (OSError, ValueError) as error:
             LOGGER.exception("Could not open project")
             QMessageBox.critical(self, "Could not open project", str(error))

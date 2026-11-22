@@ -1,4 +1,4 @@
-"""Background worker for image normalization."""
+"""Qt background worker adapting image normalization to Qt signals."""
 
 from __future__ import annotations
 
@@ -8,10 +8,8 @@ from threading import Event
 
 from PySide6.QtCore import QObject, QRunnable, Signal, Slot
 
-from universal_dataset_builder.dataset.normalizer import (
-    NormalizationSummary,
-    normalize_project_images,
-)
+from universal_dataset_builder.dataset.normalizer import NormalizationSummary
+from universal_dataset_builder.services.dataset_service import DatasetService
 
 LOGGER = logging.getLogger(__name__)
 
@@ -25,7 +23,7 @@ class NormalizerWorkerSignals(QObject):
 
 
 class NormalizerWorker(QRunnable):
-    """Execute normalization outside the GUI thread."""
+    """Execute the shared normalization service outside the GUI thread."""
 
     def __init__(
         self,
@@ -56,7 +54,7 @@ class NormalizerWorker(QRunnable):
     @Slot()
     def run(self) -> None:
         try:
-            summary: NormalizationSummary = normalize_project_images(
+            summary: NormalizationSummary = DatasetService.normalize_images(
                 self.database_path,
                 self.source_path,
                 self.dataset_path,
