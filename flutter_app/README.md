@@ -20,40 +20,34 @@ flutter pub get
 
 The command adds the requested desktop platform folders to this existing Flutter app. Keep the generated `linux/` and `windows/` runner files when building locally.
 
-## Run in development
+## Run normally
 
-Terminal 1, from the repository root:
+From the repository root:
 
 ```bash
 uv sync --all-groups
+uv run udb
+```
+
+The launcher shows the Legacy and Expressive UI choices. When Expressive is selected, it starts the local API, creates the native desktop runner folder on first use, runs `flutter pub get`, and opens the Flutter window. You do not need a second terminal.
+
+## Manual developer mode
+
+For API debugging only, start the backend manually from the repository root:
+
+```bash
 uv run udb-api
 ```
 
-Terminal 2, from `flutter_app/`:
+In a second terminal, run Flutter from `flutter_app/`:
 
 ```bash
 flutter run -d linux
 ```
 
-On Windows, use:
+On Windows, use `flutter run -d windows`. The launcher is the recommended path for normal use; manual mode is useful when debugging the frontend and backend separately.
 
-```powershell
-flutter run -d windows
-```
-
-The local API defaults to `http://127.0.0.1:17891`. The address can be changed in VLM Connection. Keep the Python API and Flutter UI on the same computer unless the backend is separately secured.
-
-## Build
-
-```bash
-flutter build linux --release
-```
-
-or:
-
-```powershell
-flutter build windows --release
-```
+The local API defaults to `http://127.0.0.1:17891`. Keep the Python API and Flutter UI on the same computer unless the backend is separately secured.
 
 ## Motion preferences
 
