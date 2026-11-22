@@ -21,7 +21,7 @@ def create_application() -> QApplication:
 
     application.setApplicationName("Universal Dataset Builder")
     application.setApplicationDisplayName("Universal Dataset Builder")
-    application.setOrganizationName("NUTIS-YT")
+    application.setOrganizationName("ericnorthwest")
     application.setApplicationVersion(__version__)
 
     def handle_exception(

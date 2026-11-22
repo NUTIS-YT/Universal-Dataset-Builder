@@ -9,13 +9,16 @@ description = "A cross-platform desktop application for preparing image datasets
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "fastapi>=0.115",
     "httpx>=0.27",
     "Pillow>=10.0",
     "PySide6>=6.8",
+    "uvicorn[standard]>=0.30",
 ]
 
 [project.scripts]
 udb = "universal_dataset_builder.main:main"
+udb-api = "universal_dataset_builder.api.server:main"
 
 [dependency-groups]
 dev = [

@@ -30,6 +30,7 @@ class ScanSummary:
     failed: int
     failed_files: tuple[str, ...]
     metadata_warning: str | None = None
+    cancelled: bool = False
 
 
 def _sha256(path: Path) -> str:
@@ -109,6 +110,7 @@ def scan_directory(
     *,
     recursive: bool = True,
     progress_callback: Callable[[int, int], None] | None = None,
+    cancel_requested: Callable[[], bool] | None = None,
 ) -> ScanSummary:
     """Scan a directory without modifying source files and index images in SQLite.
 
@@ -128,9 +130,16 @@ def scan_directory(
     unchanged = 0
     failed = 0
     failed_files: list[str] = []
+    cancelled = False
+    processed = 0
 
     with connect(database_path) as connection:
         for index, path in enumerate(files, start=1):
+            if cancel_requested is not None and cancel_requested():
+                cancelled = True
+                break
+
+            processed = index
             relative_name = path.relative_to(source).as_posix()
             width, height, image_format, image_hash, validation_error = _inspect_image(path)
             status = "Failed" if validation_error else "Pending"
@@ -198,6 +207,9 @@ def scan_directory(
 
         connection.commit()
 
+    if cancelled and progress_callback is not None:
+        progress_callback(processed, len(files))
+
     metadata_warning: str | None = None
     try:
         sync_training_metadata(
@@ -215,4 +227,5 @@ def scan_directory(
         failed=failed,
         failed_files=tuple(failed_files),
         metadata_warning=metadata_warning,
+        cancelled=cancelled,
     )

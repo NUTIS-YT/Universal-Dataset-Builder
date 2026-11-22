@@ -36,6 +36,7 @@ class DatasetService:
         *,
         recursive: bool = True,
         progress_callback: Callable[[int, int], None] | None = None,
+        cancel_requested: Callable[[], bool] | None = None,
     ) -> ScanSummary:
         """Index source images and synchronize the training manifest."""
         return scan_directory(
@@ -43,6 +44,7 @@ class DatasetService:
             Path(source_directory),
             recursive=recursive,
             progress_callback=progress_callback,
+            cancel_requested=cancel_requested,
         )
 
     @staticmethod

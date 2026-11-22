@@ -25,10 +25,17 @@ VLM Connection uses an external OpenAI-compatible API. It retrieves available mo
 
 ## Development setup
 
-    git clone https://github.com/NUTIS-YT/Universal-Dataset-Builder.git
+    git clone https://github.com/ericnorthwest/Universal-Dataset-Builder.git
     cd Universal-Dataset-Builder
     uv sync --all-groups
     uv run udb
+
+Start the local API server used by the Expressive UI:
+
+    uv run udb-api
+
+The API listens on 127.0.0.1:17891 by default. It is intended for a local desktop
+frontend; do not expose it to a network without adding an authentication layer.
 
 Run tests and lint checks:
 
@@ -63,6 +70,7 @@ The code is organized under src/universal_dataset_builder/:
 - storage/ — SQLite schema and database access.
 - vlm/ — OpenAI-compatible API client and image preparation.
 - workers/ — PySide6 adapters that run shared services in background threads.
+- api/ — local FastAPI interface and managed background jobs shared with non-Qt front ends.
 
 VLM API requests are executed in worker threads so network operations do not freeze the interface. The application does not manage model downloads or server processes. API settings are stored in the user's local application configuration; avoid saving a production secret on a shared computer.
 

@@ -108,3 +108,29 @@ def test_non_recursive_scan_only_indexes_top_level_files(tmp_path):
     assert summary.discovered == 1
     assert summary.added == 1
     assert [row["filename"] for row in read_images(project.path)] == ["top.png"]
+
+
+
+def test_scan_can_be_cancelled_between_images(tmp_path):
+    from threading import Event
+
+    project = Project.create(tmp_path / "cancel-project", "Cancelable scan")
+    Image.new("RGB", (8, 8), "red").save(project.source_path / "a.png")
+    Image.new("RGB", (8, 8), "blue").save(project.source_path / "b.png")
+    cancel_event = Event()
+
+    def report_progress(current: int, _total: int) -> None:
+        if current == 1:
+            cancel_event.set()
+
+    summary = scan_directory(
+        project.path,
+        project.source_path,
+        progress_callback=report_progress,
+        cancel_requested=cancel_event.is_set,
+    )
+
+    assert summary.cancelled is True
+    assert summary.discovered == 2
+    assert summary.added == 1
+    assert len(read_images(project.path)) == 1
