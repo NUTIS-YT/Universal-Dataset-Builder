@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../data/models.dart';
 import '../state/app_controller.dart';
@@ -180,7 +180,7 @@ class _CaptionGeneratorPageState extends State<CaptionGeneratorPage> {
                     ),
                     const SizedBox(height: 14),
                     DropdownButtonFormField<String>(
-                      value: _selectionMode,
+                      initialValue: _selectionMode,
                       decoration: const InputDecoration(
                         labelText: 'Images to process',
                         prefixIcon: Icon(Icons.filter_alt_outlined),
