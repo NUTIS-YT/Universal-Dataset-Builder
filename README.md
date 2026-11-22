@@ -16,7 +16,7 @@ The JSONL manifest uses the trainer-compatible fields image and prompt. Image pa
 
 The Image Normalizer converts indexed source images to sequential PNG files, applies EXIF orientation, converts embedded color profiles to sRGB, handles transparency, detects exact pixel duplicates, and never overwrites existing output files. Normalization runs in the background and can be cancelled between images; after the operation, the JSONL manifest is synchronized.
 
-VLM Connection uses an external OpenAI-compatible API. It retrieves available model IDs from /models and sends image-plus-prompt requests to /chat/completions. Caption Generator supports missing-caption and regenerate-unreviewed modes, sequential processing, progress reporting, cancellation between requests, and metadata-aware caption storage. Generated captions remain unreviewed until a person accepts or edits them in Dataset.
+VLM Connection uses an external OpenAI-compatible API. It retrieves available model IDs from /models and sends image-plus-prompt requests to /chat/completions. Caption Generator supports missing-caption and regenerate-unreviewed modes, sequential processing, progress reporting, cancellation between requests, and metadata-aware caption storage. Generated captions remain unreviewed until a person accepts or edits them in Dataset. An optional project-level character reference can be enabled in Caption Generator: its description guides the VLM to preserve stable identity traits across viewpoints, and its trigger word is automatically prepended to every generated caption. These options are stored in project.fdb and are also available through the local API.
 
 ## Requirements
 
