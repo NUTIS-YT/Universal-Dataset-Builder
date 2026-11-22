@@ -254,7 +254,7 @@ class _ConnectionPageState extends State<ConnectionPage> {
             },
           ),
           const SizedBox(height: 16),
-          SectionCard(
+          const SectionCard(
             title: 'Connection notes',
             child: const Column(
               children: [
