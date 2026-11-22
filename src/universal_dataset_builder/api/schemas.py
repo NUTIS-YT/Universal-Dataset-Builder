@@ -40,6 +40,12 @@ class CaptionGenerationRequest(BaseModel):
     prompt: str | None = Field(default=None, max_length=20_000)
 
 
+class CaptionCharacterSettingsUpdateRequest(BaseModel):
+    enabled: bool = False
+    description: str = Field(default="", max_length=10_000)
+    trigger_word: str = Field(default="", max_length=512)
+
+
 class CaptionUpdateRequest(BaseModel):
     caption: str = Field(min_length=1, max_length=20_000)
 
