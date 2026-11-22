@@ -19,10 +19,10 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Future<void> _browseParentDirectory(TextEditingController target) async {
     try {
-      final selected = await FilePicker.getDirectoryPath(
+      final selected = await FilePicker.pickDirectory(
         dialogTitle: 'Choose project parent folder',
       );
-      if (selected != null) target.text = selected;
+      if (selected != null) target.text = selected.toFilePath();
     } catch (error) {
       _showMessage('Could not open the folder picker: $error', error: true);
     }
@@ -100,7 +100,7 @@ class _DashboardPageState extends State<DashboardPage> {
     }
 
     if (directoryPath.text.trim().isEmpty || name.text.trim().isEmpty) {
-      _message('Choose a parent folder and enter a project name.', error: true);
+      _showMessage('Choose a parent folder and enter a project name.', error: true);
       directoryPath.dispose();
       name.dispose();
       return;
@@ -159,7 +159,7 @@ class _DashboardPageState extends State<DashboardPage> {
       return;
     }
     if (projectPath.text.trim().isEmpty) {
-      _message('Choose a project file to open.', error: true);
+      _showMessage('Choose a project file to open.', error: true);
       projectPath.dispose();
       return;
     }
