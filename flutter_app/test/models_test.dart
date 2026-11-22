@@ -45,6 +45,34 @@ void main() {
           'A character with silver hair and green eyes.');
     });
 
+    test('dataset image pages retain total count and pagination offsets', () {
+      final page = DatasetImagePage.fromJson({
+        'items': [
+          {
+            'image_id': 7,
+            'filename': '00007.png',
+            'original_filename': 'portrait.png',
+            'status': 'Captioned',
+            'caption_text': 'A character portrait.',
+            'caption_reviewed': false,
+            'file_url': '/api/v1/project/images/7/file',
+            'width': 1024,
+            'height': 1024,
+            'format': 'PNG',
+          },
+        ],
+        'total': 245,
+        'offset': 100,
+        'limit': 100,
+      });
+
+      expect(page.items, hasLength(1));
+      expect(page.items.single.id, 7);
+      expect(page.total, 245);
+      expect(page.offset, 100);
+      expect(page.limit, 100);
+    });
+
     test('job snapshots expose progress and terminal state', () {
       final job = JobSnapshot.fromJson({
         'job_id': 'abc123',
