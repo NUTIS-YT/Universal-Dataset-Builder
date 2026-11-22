@@ -17,18 +17,18 @@ class _DashboardPageState extends State<DashboardPage> {
   AppController get controller => widget.controller;
   bool _dialogBusy = false;
 
-  Future<void> _browseParentDirectory() async {
+  Future<void> _browseParentDirectory(TextEditingController target) async {
     try {
       final selected = await FilePicker.getDirectoryPath(
         dialogTitle: 'Choose project parent folder',
       );
-      if (selected != null) directoryPath.text = selected;
+      if (selected != null) target.text = selected;
     } catch (error) {
       _showMessage('Could not open the folder picker: $error', error: true);
     }
   }
 
-  Future<void> _browseProjectFile() async {
+  Future<void> _browseProjectFile(TextEditingController target) async {
     try {
       final selected = await FilePicker.pickFile(
         dialogTitle: 'Open Universal Dataset Builder project',
@@ -36,7 +36,7 @@ class _DashboardPageState extends State<DashboardPage> {
         allowedExtensions: ['fdb'],
       );
       final selectedPath = selected?.path;
-      if (selectedPath != null) projectPath.text = selectedPath;
+      if (selectedPath != null) target.text = selectedPath;
     } catch (error) {
       _showMessage('Could not open the project picker: $error', error: true);
     }
@@ -72,7 +72,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   prefixIcon: const Icon(Icons.folder_outlined),
                   suffixIcon: IconButton(
                     tooltip: 'Browse for folder',
-                    onPressed: _browseParentDirectory,
+                    onPressed: () => _browseParentDirectory(directoryPath),
                     icon: const Icon(Icons.folder_open_rounded),
                   ),
                   helperText: 'The project folder will be created inside this directory.',
@@ -136,7 +136,7 @@ class _DashboardPageState extends State<DashboardPage> {
               prefixIcon: const Icon(Icons.folder_open_rounded),
               suffixIcon: IconButton(
                 tooltip: 'Browse for project file',
-                onPressed: _browseProjectFile,
+                onPressed: () => _browseProjectFile(projectPath),
                 icon: const Icon(Icons.folder_open_rounded),
               ),
             ),
@@ -155,6 +155,11 @@ class _DashboardPageState extends State<DashboardPage> {
       ),
     );
     if (result != true) {
+      projectPath.dispose();
+      return;
+    }
+    if (projectPath.text.trim().isEmpty) {
+      _message('Choose a project file to open.', error: true);
       projectPath.dispose();
       return;
     }
