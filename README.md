@@ -56,12 +56,13 @@ When an existing project is opened, Universal Dataset Builder rebuilds metadata.
 
 The code is organized under src/universal_dataset_builder/:
 
-- core/ — application configuration and project lifecycle.
+- core/ — application configuration and project data models.
 - dataset/ — source scanning, image normalization, and JSONL training metadata.
-- gui/ — Qt main window, pages, widgets, and theme management.
+- services/ — UI-independent project, dataset, and caption workflows shared by front ends.
+- gui/ — the existing PySide6 main window, pages, widgets, and theme management.
 - storage/ — SQLite schema and database access.
 - vlm/ — OpenAI-compatible API client and image preparation.
-- workers/ — background operations coordinated with the GUI.
+- workers/ — PySide6 adapters that run shared services in background threads.
 
 VLM API requests are executed in worker threads so network operations do not freeze the interface. The application does not manage model downloads or server processes. API settings are stored in the user's local application configuration; avoid saving a production secret on a shared computer.
 

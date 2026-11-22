@@ -26,7 +26,6 @@ from PySide6.QtWidgets import (
 from universal_dataset_builder.core.config import ConfigStore
 from universal_dataset_builder.core.project import Project
 from universal_dataset_builder.dataset.metadata import JSONL_METADATA_FORMAT
-from universal_dataset_builder.services.project_service import ProjectService
 from universal_dataset_builder.gui.pages.caption_generator import CaptionGeneratorPage
 from universal_dataset_builder.gui.pages.dashboard import DashboardPage
 from universal_dataset_builder.gui.pages.dataset import DatasetPage
@@ -34,6 +33,7 @@ from universal_dataset_builder.gui.pages.normalizer import NormalizerPage
 from universal_dataset_builder.gui.pages.settings import SettingsPage
 from universal_dataset_builder.gui.pages.vlm_connection import VLMConnectionPage
 from universal_dataset_builder.gui.styles.theme_manager import ThemeManager
+from universal_dataset_builder.services.project_service import ProjectService
 
 LOGGER = logging.getLogger(__name__)
 
