@@ -168,7 +168,10 @@ def create_app(
             or "/" in payload.name
             or "\\" in payload.name
         ):
-            raise HTTPException(status_code=422, detail="Project name must be a single folder name.")
+            raise HTTPException(
+                status_code=422,
+                detail="Project name must be a single folder name.",
+            )
         try:
             with mutation_guard():
                 project_directory = Path(payload.directory).expanduser() / payload.name

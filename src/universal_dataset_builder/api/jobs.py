@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass, is_dataclass
 from datetime import UTC, datetime
 from threading import Event, RLock
-from typing import Callable
 from uuid import uuid4
 
 LOGGER = logging.getLogger(__name__)

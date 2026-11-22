@@ -69,7 +69,6 @@ def test_scan_normalize_gallery_caption_and_file_routes(tmp_path):
             json={"directory": str(tmp_path), "name": "Dataset API"},
         )
         assert created.status_code == 201
-        project = created.json()
         source = tmp_path / "Dataset API" / "source"
         Image.new("RGB", (32, 20), "navy").save(source / "wolf.png")
 
