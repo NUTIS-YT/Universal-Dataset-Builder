@@ -128,6 +128,47 @@ void main() {
     api.close();
   });
 
+  test('API client requests image pages with offset and limit', () async {
+    final client = MockClient((request) async {
+      expect(request.method, 'GET');
+      expect(request.url.path, '/api/v1/project/images');
+      expect(request.url.queryParameters['offset'], '100');
+      expect(request.url.queryParameters['limit'], '100');
+
+      return http.Response(
+        jsonEncode({
+          'items': [
+            {
+              'image_id': 101,
+              'filename': '00101.png',
+              'original_filename': 'image-101.png',
+              'status': 'Pending',
+              'caption_text': '',
+              'caption_reviewed': false,
+              'file_url': '/api/v1/project/images/101/file',
+              'width': 512,
+              'height': 512,
+              'format': 'PNG',
+            },
+          ],
+          'total': 245,
+          'offset': 100,
+          'limit': 100,
+        }),
+        200,
+        headers: {'content-type': 'application/json'},
+      );
+    });
+
+    final api = UdbApi('http://127.0.0.1:17891', client: client);
+    final result = await api.getImagesPage(offset: 100, limit: 100);
+
+    expect(result.items.single.id, 101);
+    expect(result.offset, 100);
+    expect(result.total, 245);
+    api.close();
+  });
+
   test('API client surfaces backend error details', () async {
     final api = UdbApi(
       'http://127.0.0.1:17891',
