@@ -107,7 +107,7 @@ class UdbApi {
     await _request('DELETE', '/api/v1/project');
   }
 
-  Future<List<DatasetImage>> getImages({
+  Future<DatasetImagePage> getImagesPage({
     String search = '',
     String? status,
     int offset = 0,
@@ -126,11 +126,21 @@ class UdbApi {
       '/api/v1/project/images',
       query: query,
     ) as JsonMap;
-    return (data['items'] as List<dynamic>? ?? const [])
-        .whereType<Map>()
-        .map((item) => DatasetImage.fromJson(Map<String, dynamic>.from(item)))
-        .toList();
+    return DatasetImagePage.fromJson(data);
   }
+
+  Future<List<DatasetImage>> getImages({
+    String search = '',
+    String? status,
+    int offset = 0,
+    int limit = 100,
+  }) async =>
+      (await getImagesPage(
+        search: search,
+        status: status,
+        offset: offset,
+        limit: limit,
+      )).items;
 
   Uri imageUri(String fileUrl) => _uri(fileUrl);
 
