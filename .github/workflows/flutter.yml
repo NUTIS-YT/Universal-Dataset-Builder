@@ -63,4 +63,4 @@ jobs:
 
       - name: Build desktop application
         working-directory: flutter_app
-        run: flutter build ${{ matrix.platform }} --release
+        run: flutter build ${{ matrix.platform }} --debug
