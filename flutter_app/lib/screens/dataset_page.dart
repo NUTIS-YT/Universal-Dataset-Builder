@@ -16,36 +16,114 @@ class DatasetPage extends StatefulWidget {
 }
 
 class _DatasetPageState extends State<DatasetPage> {
+  static const _pageSize = 100;
+
   final _searchController = TextEditingController();
   String _status = 'All';
   bool _loading = false;
+  bool _loadingMore = false;
+  List<DatasetImage> _images = [];
+  int _total = 0;
+  int _offset = 0;
+  String? _loadedProjectPath;
+  String? _lastFinishedJobId;
 
   AppController get controller => widget.controller;
 
   @override
   void initState() {
     super.initState();
-    unawaited(_refresh());
+    _loadedProjectPath = controller.project?.databasePath;
+    controller.addListener(_handleControllerChanged);
+    if (controller.project != null) {
+      unawaited(_refresh());
+    }
   }
 
   @override
   void dispose() {
+    controller.removeListener(_handleControllerChanged);
     _searchController.dispose();
     super.dispose();
   }
 
+  void _handleControllerChanged() {
+    final currentPath = controller.project?.databasePath;
+    if (currentPath != _loadedProjectPath) {
+      _loadedProjectPath = currentPath;
+      if (currentPath == null) {
+        setState(() {
+          _images = [];
+          _total = 0;
+          _offset = 0;
+        });
+      } else {
+        unawaited(_refresh());
+      }
+      return;
+    }
+
+    final job = controller.job;
+    if (job != null && job.isTerminal && job.id != _lastFinishedJobId) {
+      _lastFinishedJobId = job.id;
+      unawaited(_refresh());
+    }
+  }
+
   Future<void> _refresh() async {
-    if (controller.project == null) return;
-    setState(() => _loading = true);
+    if (controller.project == null) {
+      if (mounted) {
+        setState(() {
+          _images = [];
+          _total = 0;
+          _offset = 0;
+        });
+      }
+      return;
+    }
+    setState(() {
+      _loading = true;
+      _loadingMore = false;
+    });
     try {
-      await controller.refreshImages(
+      final page = await controller.api.getImagesPage(
         search: _searchController.text.trim(),
         status: _status,
+        offset: 0,
+        limit: _pageSize,
       );
+      if (!mounted) return;
+      setState(() {
+        _images = page.items;
+        _total = page.total;
+        _offset = page.items.length;
+      });
     } catch (error) {
       _message(error.toString(), error: true);
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_loadingMore || _loading || _offset >= _total) return;
+    setState(() => _loadingMore = true);
+    try {
+      final page = await controller.api.getImagesPage(
+        search: _searchController.text.trim(),
+        status: _status,
+        offset: _offset,
+        limit: _pageSize,
+      );
+      if (!mounted) return;
+      setState(() {
+        _images = [..._images, ...page.items];
+        _offset += page.items.length;
+      });
+    } catch (error) {
+      _message(error.toString(), error: true);
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
     }
   }
 
@@ -143,83 +221,92 @@ class _DatasetPageState extends State<DatasetPage> {
         ),
         const SizedBox(height: 16),
         Expanded(
-          child: AnimatedBuilder(
-            animation: controller,
-            builder: (context, _) {
-              final images = controller.images;
-              if (_loading && images.isEmpty) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (images.isEmpty) {
-                return EmptyState(
-                  icon: Icons.photo_library_outlined,
-                  title: 'No images found',
-                  message: 'Scan the source folder from Overview or change the search and status filters.',
-                  action: FilledButton.tonalIcon(
-                    onPressed: _refresh,
-                    icon: const Icon(Icons.refresh_rounded),
-                    label: const Text('Refresh'),
-                  ),
-                );
-              }
-
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: Row(
+          child: _loading && _images.isEmpty
+              ? const Center(child: CircularProgressIndicator())
+              : _images.isEmpty
+                  ? EmptyState(
+                      icon: Icons.photo_library_outlined,
+                      title: 'No images found',
+                      message: 'Scan the source folder from Overview or change the search and status filters.',
+                      action: FilledButton.tonalIcon(
+                        onPressed: _refresh,
+                        icon: const Icon(Icons.refresh_rounded),
+                        label: const Text('Refresh'),
+                      ),
+                    )
+                  : Column(
                       children: [
-                        Text(
-                          '${images.length} images loaded',
-                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                color: scheme.onSurfaceVariant,
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: Row(
+                            children: [
+                              Text(
+                                '$_offset of $_total images',
+                                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                      color: scheme.onSurfaceVariant,
+                                    ),
                               ),
+                              const Spacer(),
+                              if (_loading)
+                                const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                            ],
+                          ),
                         ),
-                        const Spacer(),
-                        if (_loading)
-                          const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                        Expanded(
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              final columns = constraints.maxWidth > 1200
+                                  ? 5
+                                  : constraints.maxWidth > 880
+                                      ? 4
+                                      : constraints.maxWidth > 570
+                                          ? 3
+                                          : constraints.maxWidth > 360
+                                              ? 2
+                                              : 1;
+                              return GridView.builder(
+                                key: const PageStorageKey('dataset-grid'),
+                                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: columns,
+                                  crossAxisSpacing: 13,
+                                  mainAxisSpacing: 13,
+                                  childAspectRatio: 0.78,
+                                ),
+                                itemCount: _images.length,
+                                itemBuilder: (context, index) => _ImageTile(
+                                  image: _images[index],
+                                  onTap: () => _openImage(_images[index]),
+                                  delay: index * 28,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        if (_offset < _total)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 12),
+                            child: FilledButton.tonalIcon(
+                              onPressed: _loadingMore ? null : _loadMore,
+                              icon: _loadingMore
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    )
+                                  : const Icon(Icons.expand_more_rounded),
+                              label: Text(
+                                _loadingMore
+                                    ? 'Loading…'
+                                    : 'Load more (\${_total - _offset} remaining)',
+                              ),
+                            ),
                           ),
                       ],
                     ),
-                  ),
-                  Expanded(
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        final columns = constraints.maxWidth > 1200
-                            ? 5
-                            : constraints.maxWidth > 880
-                                ? 4
-                                : constraints.maxWidth > 570
-                                    ? 3
-                                    : constraints.maxWidth > 360
-                                        ? 2
-                                        : 1;
-                        return GridView.builder(
-                          key: const PageStorageKey('dataset-grid'),
-                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: columns,
-                            crossAxisSpacing: 13,
-                            mainAxisSpacing: 13,
-                            childAspectRatio: 0.78,
-                          ),
-                          itemCount: images.length,
-                          itemBuilder: (context, index) => _ImageTile(
-                            image: images[index],
-                            onTap: () => _openImage(images[index]),
-                            delay: index * 28,
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
         ),
       ],
     );
@@ -504,7 +591,7 @@ class _ImageDetailsSheetState extends State<_ImageDetailsSheet> {
               ),
               const SizedBox(height: 10),
               Text(
-                '— × — · Unknown format · Original: undefined',
+                '${image.width ?? '—'} × ${image.height ?? '—'} · ${image.format ?? 'Unknown format'} · Original: ${image.originalFilename}',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: scheme.onSurfaceVariant,
                     ),
