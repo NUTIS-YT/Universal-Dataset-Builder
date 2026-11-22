@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../data/models.dart';
 import '../state/app_controller.dart';
@@ -118,7 +118,7 @@ class _DatasetPageState extends State<DatasetPage> {
             Expanded(
               flex: 2,
               child: DropdownButtonFormField<String>(
-                value: _status,
+                initialValue: _status,
                 decoration: const InputDecoration(
                   labelText: 'Status filter',
                   prefixIcon: Icon(Icons.filter_list_rounded),
@@ -485,7 +485,7 @@ class _ImageDetailsSheetState extends State<_ImageDetailsSheet> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _status,
+                initialValue: _status,
                 decoration: const InputDecoration(
                   labelText: 'Image status',
                   prefixIcon: Icon(Icons.flag_outlined),
