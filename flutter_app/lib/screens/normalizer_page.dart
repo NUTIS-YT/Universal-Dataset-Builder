@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../state/app_controller.dart';
 import '../widgets/common.dart';
@@ -131,7 +131,7 @@ class _NormalizerPageState extends State<NormalizerPage> {
                     ),
                     const SizedBox(height: 14),
                     DropdownButtonFormField<String>(
-                      value: _alphaMode,
+                      initialValue: _alphaMode,
                       decoration: const InputDecoration(
                         labelText: 'Transparency handling',
                         prefixIcon: Icon(Icons.layers_outlined),
@@ -147,7 +147,7 @@ class _NormalizerPageState extends State<NormalizerPage> {
                     ),
                     const SizedBox(height: 14),
                     DropdownButtonFormField<String>(
-                      value: _sortMode,
+                      initialValue: _sortMode,
                       decoration: const InputDecoration(
                         labelText: 'Image order',
                         prefixIcon: Icon(Icons.sort_rounded),
