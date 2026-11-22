@@ -18,6 +18,7 @@ dependencies = [
 
 [project.scripts]
 udb = "universal_dataset_builder.main:main"
+udb-legacy = "universal_dataset_builder.main:legacy_main"
 udb-api = "universal_dataset_builder.api.server:main"
 
 [dependency-groups]
