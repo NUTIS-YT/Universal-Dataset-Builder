@@ -301,7 +301,7 @@ class _DatasetPageState extends State<DatasetPage> {
                               label: Text(
                                 _loadingMore
                                     ? 'Loading…'
-                                    : 'Load more (\${_total - _offset} remaining)',
+                                    : 'Load more (${_total - _offset} remaining)',
                               ),
                             ),
                           ),
