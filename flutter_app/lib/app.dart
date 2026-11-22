@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'screens/appearance_page.dart';
 import 'screens/caption_generator_page.dart';
