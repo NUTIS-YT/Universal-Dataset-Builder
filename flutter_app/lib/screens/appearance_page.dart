@@ -45,7 +45,7 @@ class _AppearancePageState extends State<AppearancePage> {
                   onChanged: (value) {
                     if (value != null) controller.setThemeMode(value);
                   },
-                  child: Column(
+                  child: const Column(
                     children: [
                       RadioListTile<String>(
                         contentPadding: EdgeInsets.zero,
