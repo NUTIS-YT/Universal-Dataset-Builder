@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../state/app_controller.dart';
 
@@ -248,10 +248,8 @@ class EmptyState extends StatelessWidget {
                     ),
               ),
             ),
-            if (action != null) ...[
-              const SizedBox(height: 22),
-              action!,
-            ],
+            if (action != null) const SizedBox(height: 22),
+            ?action,
           ],
         ),
       ),
@@ -277,9 +275,7 @@ class JobProgressCard extends StatelessWidget {
       'cancelling' => 'Stopping after current item…',
       _ => 'Working…',
     };
-    final subtitle = job.item.isEmpty
-        ? (job.error ?? job.status)
-        : job.item;
+    final subtitle = job.item.isEmpty ? (job.error ?? job.status) : job.item;
     return SectionCard(
       title: title,
       subtitle: subtitle,
@@ -351,7 +347,7 @@ class AppControllerScope extends InheritedWidget {
 Widget buildProjectRequiredState(BuildContext context) => const EmptyState(
       icon: Icons.folder_open_rounded,
       title: 'No project open',
-      message: 'Create a new project or open an existing project from Overview.',
+      message: 'Create or open a project first.',
     );
 
 String formatStatus(String value) => switch (value) {

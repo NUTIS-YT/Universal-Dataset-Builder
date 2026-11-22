@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../state/app_controller.dart';
 import '../widgets/common.dart';
@@ -213,7 +213,7 @@ class _ConnectionPageState extends State<ConnectionPage> {
                     if (settings.models.isNotEmpty) ...[
                       const SizedBox(height: 18),
                       DropdownButtonFormField<String>(
-                        value: settings.models.contains(settings.model)
+                        initialValue: settings.models.contains(settings.model)
                             ? settings.model
                             : settings.models.first,
                         decoration: const InputDecoration(
@@ -256,8 +256,8 @@ class _ConnectionPageState extends State<ConnectionPage> {
           const SizedBox(height: 16),
           SectionCard(
             title: 'Connection notes',
-            child: Column(
-              children: const [
+            child: const Column(
+              children: [
                 _ConnectionNote(
                   icon: Icons.lock_outline_rounded,
                   title: 'Local by default',

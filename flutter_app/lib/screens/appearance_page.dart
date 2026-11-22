@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../state/app_controller.dart';
 import '../widgets/common.dart';
@@ -40,39 +40,33 @@ class _AppearancePageState extends State<AppearancePage> {
               final appearance = SectionCard(
                 title: 'Color theme',
                 subtitle: 'Choose a theme for the entire Expressive interface.',
-                child: Column(
-                  children: [
-                    RadioListTile<String>(
-                      contentPadding: EdgeInsets.zero,
-                      value: 'dark',
-                      groupValue: controller.themeMode,
-                      onChanged: (value) {
-                        if (value != null) controller.setThemeMode(value);
-                      },
-                      title: const Text('Dark'),
-                      secondary: const Icon(Icons.dark_mode_outlined),
-                    ),
-                    RadioListTile<String>(
-                      contentPadding: EdgeInsets.zero,
-                      value: 'light',
-                      groupValue: controller.themeMode,
-                      onChanged: (value) {
-                        if (value != null) controller.setThemeMode(value);
-                      },
-                      title: const Text('Light'),
-                      secondary: const Icon(Icons.light_mode_outlined),
-                    ),
-                    RadioListTile<String>(
-                      contentPadding: EdgeInsets.zero,
-                      value: 'system',
-                      groupValue: controller.themeMode,
-                      onChanged: (value) {
-                        if (value != null) controller.setThemeMode(value);
-                      },
-                      title: const Text('Follow system'),
-                      secondary: const Icon(Icons.brightness_auto_outlined),
-                    ),
-                  ],
+                child: RadioGroup<String>(
+                  groupValue: controller.themeMode,
+                  onChanged: (value) {
+                    if (value != null) controller.setThemeMode(value);
+                  },
+                  child: Column(
+                    children: [
+                      RadioListTile<String>(
+                        contentPadding: EdgeInsets.zero,
+                        value: 'dark',
+                        title: const Text('Dark'),
+                        secondary: const Icon(Icons.dark_mode_outlined),
+                      ),
+                      RadioListTile<String>(
+                        contentPadding: EdgeInsets.zero,
+                        value: 'light',
+                        title: const Text('Light'),
+                        secondary: const Icon(Icons.light_mode_outlined),
+                      ),
+                      RadioListTile<String>(
+                        contentPadding: EdgeInsets.zero,
+                        value: 'system',
+                        title: const Text('Follow system'),
+                        secondary: const Icon(Icons.brightness_auto_outlined),
+                      ),
+                    ],
+                  ),
                 ),
               );
               final motion = SectionCard(
@@ -90,7 +84,7 @@ class _AppearancePageState extends State<AppearancePage> {
                     ),
                     const Divider(height: 20),
                     DropdownButtonFormField<MotionPreset>(
-                      value: controller.motionPreset,
+                      initialValue: controller.motionPreset,
                       decoration: const InputDecoration(
                         labelText: 'Animation style',
                         prefixIcon: Icon(Icons.animation_rounded),
